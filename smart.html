@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="-1" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <script type="module">
+        import { io } from "https://cdn.socket.io/4.5.1/socket.io.esm.min.js";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            let devid = sessionStorage.getItem('clientId');
+            if (!devid) {
+                devid = Math.random().toString(36).substring(2, 15);
+                sessionStorage.setItem('clientId', devid);
+            }
+
+            let decPlaces = 2;
+            let interval = 50; // 20 fps
+            let alpha = 0,
+                beta = 0,
+                gamma = 0;
+            let z = 0;
+
+            const socket = io();
+
+            // socket.emit("join", "game");
+
+            document.querySelector("#contents").textContent =
+                "接続されました。あなたのIDは：" + devid;
+            document.querySelector("#content").style.backgroundColor =
+                getColorFromId(devid);
+
+            if (!("WebSocket" in window)) {
+                alert("ブラウザがWebSocketsをサポートしていません");
+            }
+
+            document.querySelector("#connect").addEventListener("click", () => {
+                setInterval(() => {
+                    socket.emit("sensor", {
+                        id: devid,
+                        a: alpha,
+                        b: beta,
+                        g: gamma,
+                        z: z,
+                    });
+                }, interval);
+                document.querySelector("#connect").style.display = "none";
+                request_permission();
+            });
+
+            function getColorFromId(id) {
+                let hash = 0;
+                for (let i = 0; i < id.length; i++) {
+                    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                const h = Math.abs(hash % 360);
+                return `hsl(${h}, 60%, 65%)`;
+            }
+
+            window.ondevicemotion = (event) => {
+                z = event.accelerationIncludingGravity.z.toFixed(decPlaces);
+            };
+
+            window.ondeviceorientation = (event) => {
+                alpha = event.alpha.toFixed(decPlaces);
+                beta = event.beta.toFixed(decPlaces);
+                gamma = event.gamma.toFixed(decPlaces);
+            };
+
+            function request_permission() {
+                if (
+                    DeviceMotionEvent &&
+                    typeof DeviceMotionEvent.requestPermission === "function"
+                ) {
+                    DeviceMotionEvent.requestPermission();
+                }
+                if (
+                    DeviceOrientationEvent &&
+                    typeof DeviceOrientationEvent.requestPermission === "function"
+                ) {
+                    DeviceOrientationEvent.requestPermission();
+                }
+            }
+        });
+    </script>
+
+    <style>
+        #connect {
+            width: 15%;
+            height: 24px;
+        }
+
+        #content {
+            background-color: #ccc;
+        }
+
+        .space {
+            height: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <center>
+        <div id="content">
+            <div class="space"></div>
+            <input id="connect" type="button" value="接続" />
+            <div>
+                <div class="space"></div>
+                <p id="contents">デバイスを傾けて下さい</p>
+            </div>
+        </div>
+
+        <p style="margin: 20px; font-size: 1.2em;">
+            スマートフォンを前後左右に傾けて操作します。<br>
+            「接続」ボタンを押して開始してください。
+        </p>
+
+        <div id="footer">
+            <h4>スマホセンサー</h4>
+        </div>
+    </center>
+</body>
+
+</html>
