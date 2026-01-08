@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(bodyParser.json());
+
 app.use(express.static('public'));
 
 const OpenAI = require('openai');
@@ -60,12 +61,12 @@ const chatHistory = [
 
 // Serve smart.html
 app.get('/smart', (req, res) => {
-    res.sendFile(path.join(__dirname, 'smart.html'));
+    res.sendFile(path.join(__dirname, 'public', 'smart.html'));
 });
 
 // Serve guidance.png (even if missing, route is ready)
 app.get('/guidance.png', (req, res) => {
-    const imgPath = path.join(__dirname, 'guidance.png');
+    const imgPath = path.join(__dirname, 'public', 'guidance.png');
     if (fs.existsSync(imgPath)) {
         res.sendFile(imgPath);
     } else {
