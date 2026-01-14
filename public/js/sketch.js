@@ -69,14 +69,17 @@ function draw() {
     directionalLight(255, 255, 255, 1, 1, -1);
 
     // 3. Earth (Fixed position relative to stars for now)
-    push();
-    // User requested "Blue sphere and camera position overlap" (Earth = User position)
-    translate(0, 0, 0);
-    rotateY(frameCount * 0.005);
-    noStroke();
-    fill(0, 100, 200, 50); // Transparent blue to allow seeing through "center of earth"
-    sphere(150);
-    pop();
+    // Logic: Hide if connected (issData present), else Show Opaque
+    if (!window.app || !window.app.issData) {
+        push();
+        // User requested "Blue sphere and camera position overlap" (Earth = User position)
+        translate(0, 0, 0);
+        rotateY(frameCount * 0.005);
+        noStroke();
+        fill(0, 100, 200); // Opaque (Reverted from transparent)
+        sphere(150);
+        pop();
+    }
 
     // --- Game Logic: Find the ISS ---
 
