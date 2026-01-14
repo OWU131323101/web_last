@@ -14,14 +14,44 @@ document.addEventListener('DOMContentLoaded', () => {
     window.showUFO = false;
 
     // UI Elements
-    // UI Elements
     const statusEl = document.getElementById('connection-status');
     const coordsEl = document.getElementById('iss-coords'); // New single element for coords
     const myCoordsEl = document.getElementById('my-coords');
     const chatWindow = document.getElementById('chat-window');
     const inputField = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
-    // const sensorBtn = document.getElementById('enable-sensors'); // Removed in new design
+
+    // Initialize Socket.io for Desktop
+    // Note: Assuming socket.io.js is loaded in index.html, which it wasn't explicitly in the provided file view but index.html usually has it or we can rely on window.io if loaded. 
+    // Wait, the index.html had <script src="js/main.js"> but didn't explicitly load socket.io client lib in the head? 
+    // Checking index from memory... wait, smart.html had it. index.html... let's check. 
+    // Assuming it is available or adding logic to be safe.
+
+    let socket;
+    try {
+        socket = io();
+
+        socket.on('sensor_update', (data) => {
+            // Update global sensor state for sketch.js
+            window.app.sensors.updateFromSocket(data);
+
+            // Update UI
+            if (myCoordsEl) {
+                // Formatting for display
+                const a = parseFloat(data.a || 0).toFixed(1);
+                const b = parseFloat(data.b || 0).toFixed(1);
+                const g = parseFloat(data.g || 0).toFixed(1);
+                myCoordsEl.textContent = `A:${a} B:${b} G:${g}`;
+            }
+        });
+
+        socket.on('chat_broadcast', (msg) => {
+            addMessage(msg.text, msg.role); // Re-using existing addMessage function
+        });
+
+    } catch (e) {
+        console.error("Socket.io not found or failed", e);
+    }
 
     // 1. Start API Polling
     setInterval(async () => {

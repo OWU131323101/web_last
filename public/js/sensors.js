@@ -20,6 +20,19 @@ class SpaceSensors {
         }
     }
 
+    updateFromSocket(data) {
+        // data: { a: alpha, b: beta, g: gamma, z: z }
+        // Map to internal structure
+        // Note: 'a' in data is alpha (compass), 'b' is beta (front/back), 'g' is gamma (left/right)
+        // Adjusting mapping based on p5.js rotation expectations
+        this.acceleration = {
+            x: parseFloat(data.g || 0), // Left/Right tilt
+            y: parseFloat(data.b || 0), // Front/Back tilt
+            z: parseFloat(data.a || 0)  // Compass (Alpha)
+        };
+        // Trigger any listeners if needed, or sketch.js reads directly
+    }
+
     startListeners() {
         window.addEventListener('devicemotion', (event) => {
             this.acceleration = event.accelerationIncludingGravity;

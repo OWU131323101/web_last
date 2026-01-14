@@ -10,6 +10,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <!-- QRCode Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Socket.IO Library -->
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body>
@@ -39,7 +41,7 @@
             <!-- Right Pane: Chat & Status -->
             <div id="right-pane">
                 <div class="status-label">状態： <span id="connection-status">未接続</span></div>
-                
+
                 <!-- Chat History Box -->
                 <div id="chat-box">
                     <div id="chat-window">
@@ -77,8 +79,8 @@
         // Note: JS logic seems to use 'user-input', 'send-btn', 'chat-window', 'qrcode' which are preserved.
         // 'iss-lat', 'iss-long' might need attention if they updated individually.
         document.getElementById('show-qr-btn').addEventListener('click', () => {
-             document.getElementById('qr-overlay').style.display = 'block';
-             // Re-trigger QR generation if needed in main.js
+            document.getElementById('qr-overlay').style.display = 'block';
+            // Re-trigger QR generation if needed in main.js
         });
         document.getElementById('close-qr').addEventListener('click', () => {
             document.getElementById('qr-overlay').style.display = 'none';

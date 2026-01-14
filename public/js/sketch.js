@@ -20,19 +20,39 @@ function setup() {
 function draw() {
     background(10); // Dark space
 
-    // Camera control via mouse (or touch) + sensors could be added here
-    orbitControl();
+    // --- Interaction / Camera ---
+    // Use Compass (Alpha) for Y-axis rotation (0-360)
+    // Use Beta for X-axis rotation (-180 to 180)
 
-    // Sensor interaction: Rotate world based on phone tilt
-    if (window.app && window.app.sensors && window.app.sensors.isReady) {
-        const acc = window.app.sensors.acceleration;
-        // Slight rotation based on tilt (assuming device is held upright-ish or flat)
-        // x: Left/Right tilt, y: Forward/Back tilt
-        if (acc.x) rotateZ(radians(acc.x * 2));
-        if (acc.y) rotateX(radians(acc.y * 2));
+    let camY = 0;
+    let camX = 0;
+
+    if (window.app && window.app.sensors) {
+        // Sensor mapping
+        // Acceleration Z mapped from updateFromSocket is Alpha (Compass)
+        // Acceleration X is Gamma (Left/Right), Y is Beta (Front/Back)
+
+        // Let's use Alpha for horizontal look (Y-axis rotation)
+        // Let's use Beta for vertical look (X-axis rotation)
+
+        let sensZ = window.app.sensors.acceleration.z || 0; // Alpha
+        let sensY = window.app.sensors.acceleration.y || 0; // Beta
+
+        camY = radians(sensZ);
+        camX = radians(sensY);
     }
 
-    // 1. Draw Stars
+    // Add orbitControl for desktop mouse backup
+    orbitControl();
+
+    // Apply Sensor Rotation
+    // Note: p5.js camera or world rotation
+    rotateY(-camY); // Match compass
+    rotateX(-camX);
+
+    // --- Environment ---
+
+    // 1. Draw Stars (Background)
     push();
     stroke(255);
     strokeWeight(2);
@@ -45,40 +65,76 @@ function draw() {
     ambientLight(50);
     directionalLight(255, 255, 255, 1, 1, -1);
 
-    // 3. Earth
+    // 3. Earth (Fixed position relative to stars for now)
     push();
+    translate(0, 100, -500);
     rotateY(frameCount * 0.005);
     noStroke();
     fill(0, 100, 200);
-    sphere(150); // Simple blue sphere for Earth
+    sphere(150);
     pop();
 
-    // 4. ISS Representation (Red orb orbiting)
+    // --- Game Logic: Find the ISS ---
+    // Target Position: Specific angle
+    // Let's say ISS is at Alpha 180, Beta 45
+    let targetAlpha = 180;
+    let targetBeta = 45;
+
+    // Calculate alignment
+    // (Simplification: just checking raw sensor values against target)
+    let currentAlpha = degrees(camY); // approx
+    if (currentAlpha < 0) currentAlpha += 360;
+
+    let currentBeta = degrees(camX);
+
+    // Alignment thresholds
+    let alphaDiff = abs(targetAlpha - (currentAlpha % 360));
+    if (alphaDiff > 180) alphaDiff = 360 - alphaDiff;
+
+    let betaDiff = abs(targetBeta - currentBeta);
+
+    let isAligned = (alphaDiff < 15 && betaDiff < 15);
+
+    // 4. Draw ISS
     push();
+    // Position ISS in the sky at the target angles
+    // Convert spherical to cartesian
+    let r = 400; // Distance
+    let x = r * cos(radians(targetBeta)) * sin(radians(targetAlpha));
+    let y = -r * sin(radians(targetBeta));
+    let z = -r * cos(radians(targetBeta)) * cos(radians(targetAlpha));
 
-    // Calculate position based on API (Mocking visualization here)
-    // In real implementation, map lat/long to 3D sphere coordinates
-    // For now, let's just make it orbit
+    translate(x, y, z);
 
-    // Use data from global MAIN app if available, else rotate
-    if (window.app && window.app.issData) {
-        // TODO: Convert Lat/Long to 3D vector
-        // For demo, we just animate
+    // Visual feedback for alignment
+    if (isAligned) {
+        // Zoom Effect
+        let zoom = sin(frameCount * 0.1) * 50 + 50;
+        translate(0, 0, zoom);
+        stroke(0, 255, 0);
+        strokeWeight(2);
+        noFill();
+        box(60); // Target box
     }
 
-    rotateY(frameCount * 0.02); // Orbit speed
-    translate(200, 0, 0); // Distance from Earth
-
+    rotateY(frameCount * 0.02);
     fill(255, 0, 0);
-    box(10); // Tiny ISS
+    box(20); // ISS
 
-    // UFO Logic (triggered by chat)
-    if (window.showUFO) {
-        translate(50, 50, 0);
-        fill(0, 255, 0);
-        ellipsoid(10, 5, 10);
-    }
+    // Solar panels
+    fill(50, 50, 150);
+    translate(20, 0, 0);
+    box(30, 10, 2);
+    translate(-40, 0, 0);
+    box(30, 10, 2);
+
     pop();
+
+    // 5. Crosshair / HUD (Fixed to camera)
+    // We need to undo rotations to draw fixed HUD
+    // Or just draw HTML overlay. HTML overlay is better performance-wise usually,
+    // but here we can just draw at the end of draw() if we reset matrix? 
+    // Actually easier to do generic HUD in HTML, but here's a "Locked" text if aligned.
 }
 
 function windowResized() {

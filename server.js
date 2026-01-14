@@ -57,11 +57,43 @@ const chatHistory = [
 // --- Socket.IO ---
 io.on('connection', (socket) => {
     console.log('a user connected');
+
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
+
+    // Forward sensor data to all clients (for desktop visualization)
     socket.on('sensor', (data) => {
-        // Handle sensor data
+        socket.broadcast.emit('sensor_update', data);
+    });
+
+    // Handle chat from mobile
+    socket.on('chat_message', async (data) => {
+        const userMessage = data.text;
+        console.log(`Chat from mobile: ${userMessage}`);
+
+        // Broadcast user message so it appears on desktop
+        io.emit('chat_broadcast', { text: userMessage, role: 'user' });
+
+        // Process with AI
+        try {
+            chatHistory.push({ role: "user", content: userMessage });
+
+            let replyText = "";
+            if (PROVIDER === 'openai') {
+                replyText = await callOpenAI(chatHistory);
+            } else if (PROVIDER === 'gemini') {
+                replyText = await callGemini(chatHistory);
+            }
+
+            chatHistory.push({ role: "assistant", content: replyText });
+
+            // Broadcast AI reply
+            io.emit('chat_broadcast', { text: replyText, role: 'bot' });
+        } catch (error) {
+            console.error("AI Error via Socket:", error);
+            io.emit('chat_broadcast', { text: "通信エラーが発生しました...", role: 'system' });
+        }
     });
 });
 
