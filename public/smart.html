@@ -7,9 +7,8 @@
     <title>Controller</title>
     <link rel="stylesheet" href="css/style.css">
 
-    <script type="module">
-        import { io } from "https://cdn.socket.io/4.5.1/socket.io.esm.min.js";
-
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
         document.addEventListener("DOMContentLoaded", () => {
             let devid = sessionStorage.getItem('clientId');
             if (!devid) {
