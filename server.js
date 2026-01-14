@@ -184,7 +184,7 @@ async function callGemini(messages) {
     return data.candidates[0].content.parts[0].text;
 }
 
-server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
     console.log(`Provider: ${PROVIDER}`);
 });
