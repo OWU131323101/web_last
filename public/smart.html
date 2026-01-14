@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 
 <head>
     <meta charset="UTF-8">
@@ -7,135 +7,129 @@
     <title>スマホコントローラー</title>
     <link rel="stylesheet" href="css/style.css">
 
-    <!-- サーバーから提供されるSocket.IOライブラリを使用 -->
+    <!-- Socket.IO ライブラリ -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             // Socket.ioの初期化
             const socket = io();
 
-            // 状態管理用の変数
-            let isSensorRunning = false;
+            // デバイスIDの生成・取得
             let devid = sessionStorage.getItem('clientId');
             if (!devid) {
                 devid = Math.random().toString(36).substring(2, 15);
                 sessionStorage.setItem('clientId', devid);
             }
 
-            // UI要素の取得
-            const statusEl = document.getElementById('status');
-            const startBtn = document.getElementById('start-btn');
-            const mobileChatLog = document.getElementById('mobile-chat-log');
-            const msgInput = document.getElementById('msg-input');
-            const sendBtn = document.getElementById('send-btn');
+            // センサー用変数
+            let interval = 50; // 送信間隔 (ms)
+            let alpha = 0, beta = 0, gamma = 0;
+            let z = 0;
+            let isSensorRunning = false;
 
-            // 1. 接続状態の監視
-            socket.on('connect', () => {
-                statusEl.textContent = "接続済み";
-                statusEl.style.backgroundColor = "#00d4ff";
-                statusEl.style.color = "#000";
-            });
+            // UI要素の取得 (CSSクラス/IDに合わせる)
+            const connectBtn = document.getElementById("connect-btn");
+            const chatLog = document.getElementById("mobile-chat-log");
+            const sendBtn = document.getElementById('mobile-send-btn'); // CSSではこのIDは指定ないがHTML構造上必要
+            const inputField = document.getElementById('mobile-input');
 
-            socket.on('disconnect', () => {
-                statusEl.textContent = "未接続";
-                statusEl.style.backgroundColor = "#ff4444";
-                statusEl.style.color = "#fff";
-            });
+            // 1. 接続ボタンの動作
+            if (connectBtn) {
+                connectBtn.addEventListener("click", () => {
+                    request_permission();
 
-            // 2. センサーデータの送信
-            function startSensors() {
-                // iOS 13+ の許可リクエスト
-                if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                    DeviceMotionEvent.requestPermission()
-                        .then(response => {
-                            if (response === 'granted') {
-                                enableMotion();
-                            } else {
-                                alert("センサーの許可が必要です");
-                            }
-                        })
-                        .catch(console.error);
-                } else {
-                    // Android / PC
-                    enableMotion();
+                    if (!isSensorRunning) {
+                        isSensorRunning = true;
+                        connectBtn.textContent = "送信中...";
+                        connectBtn.style.opacity = "0.7";
+
+                        // センサーデータ送信ループ開始
+                        setInterval(() => {
+                            socket.emit("sensor", {
+                                id: devid,
+                                a: alpha, b: beta, g: gamma, z: z
+                            });
+                        }, interval);
+                    }
+                });
+            }
+
+            // 2. センサーイベントハンドラ
+            window.ondevicemotion = (event) => {
+                if (event.accelerationIncludingGravity && event.accelerationIncludingGravity.z) {
+                    z = event.accelerationIncludingGravity.z.toFixed(2);
+                }
+            };
+
+            window.ondeviceorientation = (event) => {
+                if (event.alpha) alpha = event.alpha.toFixed(2);
+                if (event.beta) beta = event.beta.toFixed(2);
+                if (event.gamma) gamma = event.gamma.toFixed(2);
+            };
+
+            // 許可リクエスト (iOS用)
+            function request_permission() {
+                if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === "function") {
+                    DeviceMotionEvent.requestPermission().catch(console.error);
+                }
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === "function") {
+                    DeviceOrientationEvent.requestPermission().catch(console.error);
                 }
             }
 
-            function enableMotion() {
-                window.addEventListener('deviceorientation', (event) => {
-                    // データを取得してソケットで送信
-                    // p5.js側で期待されるフォーマットに合わせてデータを整形
-                    const data = {
-                        a: (event.alpha || 0).toFixed(2),
-                        b: (event.beta || 0).toFixed(2),
-                        g: (event.gamma || 0).toFixed(2)
-                    };
-                    socket.emit('sensor', data);
-                });
-
-                isSensorRunning = true;
-                startBtn.style.display = 'none'; // ボタンを隠す
-
-                // 指示テキストの更新
-                const instruction = document.querySelector('.instruction');
-                if (instruction) instruction.textContent = "スマホを動かして宇宙ステーションを探してみましょう";
-            }
-
-            startBtn.addEventListener('click', startSensors);
-
-            // 3. チャット送信 (モバイル -> サーバー -> デスクトップ)
-            function sendChat() {
-                const text = msgInput.value.trim();
-                if (!text) return;
-
-                socket.emit('chat_message', { text: text, id: devid });
-                msgInput.value = '';
-            }
-
-            sendBtn.addEventListener('click', sendChat);
-
-            // 4. チャット受信 (デスクトップ/サーバーからのブロードキャスト)
-            socket.on('chat_broadcast', (msg) => {
+            // 3. チャットロジック
+            function addMessage(text, role) {
                 const div = document.createElement('div');
-                // 自分のメッセージかAI/他人か
-                const isMe = (msg.id === devid) || (msg.role === 'user' && !msg.id);
-                // 注: 簡易的な判定です
+                div.className = `message ${role}`;
+                div.textContent = text;
+                chatLog.appendChild(div);
+                chatLog.scrollTop = chatLog.scrollHeight;
+            }
 
-                div.className = `message ${msg.role}`;
-                div.style.textAlign = msg.role === 'user' ? 'right' : 'left';
-                div.style.color = msg.role === 'user' ? '#00d4ff' : '#fff';
-                div.style.backgroundColor = 'transparent';
-                div.textContent = `${msg.role === 'user' ? '自分' : 'AI'}: ${msg.text}`;
+            if (sendBtn && inputField) {
+                sendBtn.addEventListener('click', () => {
+                    const msg = inputField.value;
+                    if (msg) {
+                        socket.emit("chat_message", { id: devid, text: msg });
+                        inputField.value = '';
+                    }
+                });
+            }
 
-                mobileChatLog.appendChild(div);
-                mobileChatLog.scrollTop = mobileChatLog.scrollHeight;
+            // 4. チャット受信
+            socket.on('chat_broadcast', (data) => {
+                // 自分のメッセージかどうかの簡易判定 (IDチェックがあればより正確)
+                // ここでは role が user か bot かで表示分け
+                addMessage(data.text, data.role);
             });
         });
     </script>
 </head>
 
-<body class="mobile-body">
+<body>
     <div class="mobile-container">
-        <header class="mobile-header">
-            <h2>コントローラー</h2>
-            <div id="status" class="connection-pill"
-                style="padding: 5px 10px; border-radius: 15px; background: #666; font-size: 0.8em;">未接続</div>
-        </header>
+        <div class="mobile-header">
+            宇宙ステーションと通信してみよう
+        </div>
 
-        <div class="sensor-area">
-            <p class="instruction">「接続開始」をタップしてセンサーを有効化</p>
-            <button id="start-btn" class="big-btn">接続開始</button>
+        <div class="connect-section">
+            <button id="connect-btn" class="connect-btn">接続してセンサー開始</button>
+        </div>
 
-            <!-- チャットログ表示エリアを兼用 -->
-            <div id="mobile-chat-log" class="touchpad-area" style="overflow-y: auto; text-align: left;">
-                <!-- ここにチャットログが表示されます -->
-            </div>
+        <div class="instruction-text">
+            スマホを動かして宇宙ステーションを探してみましょう
+        </div>
+
+        <!-- チャットログエリア (旧タッチパッドエリアを再利用) -->
+        <div class="touchpad-area" id="mobile-chat-log"
+            style="overflow-y: auto; display: flex; flex-direction: column; padding: 10px;">
+            <div class="message system">通信接続待機中...</div>
         </div>
 
         <div class="mobile-footer">
-            <div class="input-group">
-                <input type="text" id="msg-input" placeholder="メッセージ...">
-                <button id="send-btn">送信</button>
+            <div class="mobile-input-group">
+                <input type="text" id="mobile-input" placeholder="メッセージを入力">
+                <button id="mobile-send-btn">送信</button>
             </div>
         </div>
     </div>
