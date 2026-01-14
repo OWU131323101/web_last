@@ -90,22 +90,16 @@ function draw() {
         let lon = radians(parseFloat(window.app.issData.longitude));
 
         // Spherical Coordinates
-        // P5 WebGL coords: Y is Down.
         y = -r * sin(lat);
         let r_xz = r * cos(lat);
         x = r_xz * sin(lon);
         z = r_xz * cos(lon);
 
-        // Calculate Target Angles for the "Game" (Alignment)
-        // Beta (Pitch)
         targetBeta = degrees(asin(-y / r));
-
-        // Alpha (Yaw)
         targetAlpha = degrees(atan2(x, z));
         if (targetAlpha < 0) targetAlpha += 360;
-
     } else {
-        // Fallback or Initial Mock Position
+        // Fallback
         x = r * cos(radians(targetBeta)) * sin(radians(targetAlpha));
         y = -r * sin(radians(targetBeta));
         z = -r * cos(radians(targetBeta)) * cos(radians(targetAlpha));
@@ -129,7 +123,6 @@ function draw() {
     push();
     translate(x, y, z);
 
-    // Visual feedback for alignment
     if (isAligned) {
         // Zoom Effect
         let zoom = sin(frameCount * 0.1) * 50 + 50;
@@ -151,6 +144,54 @@ function draw() {
     box(30, 10, 2);
     translate(-40, 0, 0);
     box(30, 10, 2);
+
+    pop();
+
+    // 5. Draw UFO (Secret)
+    let ufoAlpha = 0; // North
+    let ufoBeta = 30; // Slightly Up
+
+    // Calculate UFO Alignment
+    let ufoAlphaDiff = abs(ufoAlpha - (currentAlpha % 360));
+    if (ufoAlphaDiff > 180) ufoAlphaDiff = 360 - ufoAlphaDiff;
+    let ufoBetaDiff = abs(ufoBeta - currentBeta);
+
+    // Threshold widened to 30 degrees
+    let isUfoAligned = (ufoAlphaDiff < 30 && ufoBetaDiff < 30);
+
+    // Export alignment state for Main.js to use
+    if (window.app) {
+        window.app.isUfoAligned = isUfoAligned;
+    }
+
+    push();
+    // UFO Position
+    let ufoR = 350;
+    let ux = ufoR * cos(radians(ufoBeta)) * sin(radians(ufoAlpha));
+    let uy = -ufoR * sin(radians(ufoBeta));
+    let uz = -ufoR * cos(radians(ufoBeta)) * cos(radians(ufoAlpha));
+
+    translate(ux, uy, uz);
+
+    // Always face camera roughly or spin
+    rotateY(frameCount * 0.05);
+
+    // Draw UFO
+    if (isUfoAligned) {
+        // Visual cue: Pulsing or scaling
+        scale(1.2);
+        stroke(255, 0, 255); // Magenta lock-on
+        noFill();
+        circle(0, 0, 50);
+    }
+
+    noStroke();
+    // Dome
+    fill(0, 255, 255, 150);
+    sphere(10);
+    // Disc
+    fill(100);
+    ellipsoid(30, 5, 30);
 
     pop();
 }

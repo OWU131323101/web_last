@@ -98,7 +98,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Send via Socket to allow server to broadcast to all (Desktop & Mobile)
             // and process AI response there.
-            socket.emit('chat_message', { text: text });
+
+            // Check UFO alignment from sketch.js
+            let target = 'iss';
+            if (window.app && window.app.isUfoAligned) {
+                target = 'alien';
+                console.log("Sending to ALIEN");
+            }
+
+            socket.emit('chat_message', {
+                text: text,
+                target: target
+            });
 
             inputField.value = '';
             // We do NOT addMessage here immediately if we wait for broadcast.
