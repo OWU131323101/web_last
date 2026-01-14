@@ -242,7 +242,45 @@ async function callGemini(messages) {
     return data.candidates[0].content.parts[0].text;
 }
 
+// --- OpenAI Connection Check ---
+async function checkOpenAIConnection() {
+    console.log("Checking OpenAI Connection...");
+    if (PROVIDER !== 'openai') return;
+
+    try {
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+            console.error("❌ OPENAI_API_KEY is missing in .env");
+            return;
+        }
+
+        // Simple model list check or minimal generation
+        const response = await fetch(OPENAI_API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: OPENAI_MODEL,
+                messages: [{ role: "user", content: "ping" }],
+                max_tokens: 5
+            })
+        });
+
+        if (response.ok) {
+            console.log("✅ OpenAI Connection Successful!");
+        } else {
+            const err = await response.text();
+            console.error(`❌ OpenAI Connection Failed: ${response.status} - ${err}`);
+        }
+    } catch (e) {
+        console.error("❌ OpenAI Connection Network Error:", e.message);
+    }
+}
+
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
     console.log(`Provider: ${PROVIDER}`);
+    checkOpenAIConnection(); // Run check on start
 });

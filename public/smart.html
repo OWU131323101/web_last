@@ -25,14 +25,10 @@
 
             // Setup UI
             const connectBtn = document.getElementById("connect-btn");
-            const statusText = document.getElementById("status-text");
+            const chatLog = document.getElementById("mobile-chat-log");
 
-            if (!("WebSocket" in window)) {
-                alert("ブラウザがWebSocketsをサポートしていません");
-            }
-
+            // Connect Button Logic
             connectBtn.addEventListener("click", () => {
-                // Change UI state
                 connectBtn.textContent = "接続済み";
                 connectBtn.style.opacity = "0.5";
 
@@ -40,16 +36,14 @@
                 setInterval(() => {
                     socket.emit("sensor", {
                         id: devid,
-                        a: alpha,
-                        b: beta,
-                        g: gamma,
-                        z: z,
+                        a: alpha, b: beta, g: gamma, z: z
                     });
                 }, interval);
 
                 request_permission();
             });
 
+            // Sensor Event Handlers
             window.ondevicemotion = (event) => {
                 if (event.accelerationIncludingGravity && event.accelerationIncludingGravity.z) {
                     z = event.accelerationIncludingGravity.z.toFixed(decPlaces);
@@ -63,39 +57,43 @@
             };
 
             function request_permission() {
-                if (
-                    typeof DeviceMotionEvent !== 'undefined' &&
-                    typeof DeviceMotionEvent.requestPermission === "function"
-                ) {
-                    DeviceMotionEvent.requestPermission()
-                        .then(response => {
-                            if (response == 'granted') {
-                                // permission granted
-                            }
-                        })
-                        .catch(console.error);
+                if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === "function") {
+                    DeviceMotionEvent.requestPermission().catch(console.error);
                 }
-                if (
-                    typeof DeviceOrientationEvent !== 'undefined' &&
-                    typeof DeviceOrientationEvent.requestPermission === "function"
-                ) {
-                    DeviceOrientationEvent.requestPermission()
-                        .then(response => {
-                            if (response == 'granted') {
-                                // permission granted
-                            }
-                        })
-                        .catch(console.error);
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === "function") {
+                    DeviceOrientationEvent.requestPermission().catch(console.error);
                 }
             }
 
-            // Chat/Send logic (Placeholder for now as specific logic wasn't in original smart.html)
-            document.getElementById('mobile-send-btn').addEventListener('click', () => {
-                const msg = document.getElementById('mobile-input').value;
+            // Chat Logic
+            const sendBtn = document.getElementById('mobile-send-btn');
+            const inputField = document.getElementById('mobile-input');
+
+            function addMessage(text, role) {
+                const div = document.createElement('div');
+                div.className = `message ${role}`;
+                // Simple icon simulation based on role for now
+                if (role === 'bot') div.innerHTML = `<div class="msg-content">${text}</div>`;
+                else div.textContent = text;
+
+                chatLog.appendChild(div);
+                chatLog.scrollTop = chatLog.scrollHeight;
+            }
+
+            sendBtn.addEventListener('click', () => {
+                const msg = inputField.value;
                 if (msg) {
-                    socket.emit("chat_message", { id: devid, text: msg }); // Assuming server handles this
-                    document.getElementById('mobile-input').value = '';
+                    // Optimistic UI update
+                    // addMessage(msg, 'user'); (Wait for broadcast to avoid duplicate if server echoes)
+                    socket.emit("chat_message", { id: devid, text: msg });
+                    inputField.value = '';
                 }
+            });
+
+            // Listen for broadcasts
+            socket.on('chat_broadcast', (data) => {
+                console.log("Received chat:", data);
+                addMessage(data.text, data.role);
             });
         });
     </script>
@@ -112,17 +110,18 @@
         </div>
 
         <div class="instruction-text">
-            「0, 0」座標を宇宙ステーションと合わせてみましょう
+            スマホを動かして「座標」を合わせてみましょう
         </div>
 
-        <!-- Touch/Sensor Area Visualization -->
-        <div class="touchpad-area">
-            <!-- Could visualise tilt here if needed -->
+        <!-- Chat Log Area (formerly Touchpad) -->
+        <div class="touchpad-area" id="mobile-chat-log"
+            style="overflow-y: auto; display: flex; flex-direction: column; padding: 10px;">
+            <div class="message system">通信接続待機中...</div>
         </div>
 
         <div class="mobile-footer">
             <div class="mobile-input-group">
-                <input type="text" id="mobile-input" placeholder="">
+                <input type="text" id="mobile-input" placeholder="メッセージを入力">
                 <button id="mobile-send-btn">送信</button>
             </div>
         </div>
