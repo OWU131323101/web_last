@@ -21,8 +21,6 @@ function setup() {
     }
 }
 
-// ... draw() function remains same ...
-
 function windowResized() {
     let container = document.getElementById('canvas-container');
     if (container) {
@@ -36,20 +34,11 @@ function draw() {
     background(10); // Dark space
 
     // --- Interaction / Camera ---
-    // Use Compass (Alpha) for Y-axis rotation (0-360)
-    // Use Beta for X-axis rotation (-180 to 180)
 
     let camY = 0;
     let camX = 0;
 
     if (window.app && window.app.sensors) {
-        // Sensor mapping
-        // Acceleration Z mapped from updateFromSocket is Alpha (Compass)
-        // Acceleration X is Gamma (Left/Right), Y is Beta (Front/Back)
-
-        // Let's use Alpha for horizontal look (Y-axis rotation)
-        // Let's use Beta for vertical look (X-axis rotation)
-
         let sensZ = window.app.sensors.acceleration.z || 0; // Alpha
         let sensY = window.app.sensors.acceleration.y || 0; // Beta
 
@@ -61,7 +50,6 @@ function draw() {
     orbitControl();
 
     // Apply Sensor Rotation
-    // Note: p5.js camera or world rotation
     rotateY(-camY); // Match compass
     rotateX(-camX);
 
@@ -90,17 +78,44 @@ function draw() {
     pop();
 
     // --- Game Logic: Find the ISS ---
-    // Target Position: Specific angle
-    // Let's say ISS is at Alpha 180, Beta 45
+
     let targetAlpha = 180;
     let targetBeta = 45;
+    let r = 400; // Orbit radius
+    let x, y, z;
+
+    // Use Real API Data if available
+    if (window.app && window.app.issData && window.app.issData.latitude) {
+        let lat = radians(parseFloat(window.app.issData.latitude));
+        let lon = radians(parseFloat(window.app.issData.longitude));
+
+        // Spherical Coordinates
+        // P5 WebGL coords: Y is Down.
+        y = -r * sin(lat);
+        let r_xz = r * cos(lat);
+        x = r_xz * sin(lon);
+        z = r_xz * cos(lon);
+
+        // Calculate Target Angles for the "Game" (Alignment)
+        // Beta (Pitch)
+        targetBeta = degrees(asin(-y / r));
+
+        // Alpha (Yaw)
+        targetAlpha = degrees(atan2(x, z));
+        if (targetAlpha < 0) targetAlpha += 360;
+
+    } else {
+        // Fallback or Initial Mock Position
+        x = r * cos(radians(targetBeta)) * sin(radians(targetAlpha));
+        y = -r * sin(radians(targetBeta));
+        z = -r * cos(radians(targetBeta)) * cos(radians(targetAlpha));
+    }
 
     // Calculate alignment
-    // (Simplification: just checking raw sensor values against target)
-    let currentAlpha = degrees(camY); // approx
+    let currentAlpha = degrees(camY || 0);
     if (currentAlpha < 0) currentAlpha += 360;
 
-    let currentBeta = degrees(camX);
+    let currentBeta = degrees(camX || 0);
 
     // Alignment thresholds
     let alphaDiff = abs(targetAlpha - (currentAlpha % 360));
@@ -108,24 +123,18 @@ function draw() {
 
     let betaDiff = abs(targetBeta - currentBeta);
 
-    let isAligned = (alphaDiff < 15 && betaDiff < 15);
+    let isAligned = (alphaDiff < 20 && betaDiff < 20);
 
     // 4. Draw ISS
     push();
-    // Position ISS in the sky at the target angles
-    // Convert spherical to cartesian
-    let r = 400; // Distance
-    let x = r * cos(radians(targetBeta)) * sin(radians(targetAlpha));
-    let y = -r * sin(radians(targetBeta));
-    let z = -r * cos(radians(targetBeta)) * cos(radians(targetAlpha));
-
     translate(x, y, z);
 
     // Visual feedback for alignment
     if (isAligned) {
         // Zoom Effect
         let zoom = sin(frameCount * 0.1) * 50 + 50;
-        translate(0, 0, zoom);
+        scale(1 + zoom / 200);
+
         stroke(0, 255, 0);
         strokeWeight(2);
         noFill();
@@ -144,14 +153,4 @@ function draw() {
     box(30, 10, 2);
 
     pop();
-
-    // 5. Crosshair / HUD (Fixed to camera)
-    // We need to undo rotations to draw fixed HUD
-    // Or just draw HTML overlay. HTML overlay is better performance-wise usually,
-    // but here we can just draw at the end of draw() if we reset matrix? 
-    // Actually easier to do generic HUD in HTML, but here's a "Locked" text if aligned.
-}
-
-function windowResized() {
-    resizeCanvas(windowWidth, windowHeight - 100);
 }
