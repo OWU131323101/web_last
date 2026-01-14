@@ -1,45 +1,30 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const fs = require('fs');
 const path = require('path');
-const http = require('http'); // Import http module
-const { Server } = require("socket.io"); // Import Socket.IO
-
+const fs = require('fs');
+const http = require('http');
+const { Server } = require("socket.io");
 require('dotenv').config();
 
 const app = express();
-const server = http.createServer(app); // Create HTTP server
-const io = new Server(server); // Initialize Socket.IO
+const server = http.createServer(app);
+const io = new Server(server);
 
 const PORT = process.env.PORT || 8080;
 
-// Middleware
-app.use(bodyParser.json());
-
+app.use(express.json());
 app.use(express.static('public'));
 
-const OpenAI = require('openai');
+// --- Configuration ---
+// const PROVIDER = 'openai';
+const PROVIDER = 'gemini';
 
-// OpenAI Proxy Setup
-const openai = new OpenAI({
-    apiKey: "dummy", // Proxy often ignores this or requires a placeholder
-    baseURL: "https://openai-api-proxy-746164391621.us-west1.run.app/v1"
-});
+// OpenAI Configuration
+const OPENAI_MODEL = 'gpt-4o-mini';
+const OPENAI_API_ENDPOINT = 'https://openai-api-proxy-746164391621.us-west1.run.app';
 
-// Socket.IO Logic
-io.on('connection', (socket) => {
-    console.log('a user connected');
-
-    socket.on('disconnect', () => {
-        console.log('user disconnected');
-    });
-
-    socket.on('sensor', (data) => {
-        // console.log("Sensor data:", data); // Log sensor data (commented out to avoid clutter)
-        // You can emit this to other clients if needed, e.g. for visualization
-        // io.emit('sensor_update', data); 
-    });
-});
+// Gemini Configuration
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
 // Load System Prompt
 const promptPath = path.join(__dirname, 'prompt.md');
@@ -50,21 +35,29 @@ try {
     console.error("Failed to read prompt.md", err);
 }
 
-// Chat History management (Simple in-memory for demo)
-// Format adapted for OpenAI: { role: "system" | "user" | "assistant", content: string }
+// Chat History
 const chatHistory = [
     { role: "system", content: systemPrompt },
     { role: "assistant", content: "了解しました。国際宇宙ステーション(ISS)の職員として振る舞います。" }
 ];
 
-// Routes
+// --- Socket.IO ---
+io.on('connection', (socket) => {
+    console.log('a user connected');
+    socket.on('disconnect', () => {
+        console.log('user disconnected');
+    });
+    socket.on('sensor', (data) => {
+        // Handle sensor data
+    });
+});
 
-// Serve smart.html
+// --- Routes ---
+
 app.get('/smart', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'smart.html'));
 });
 
-// Serve guidance.png (even if missing, route is ready)
 app.get('/guidance.png', (req, res) => {
     const imgPath = path.join(__dirname, 'public', 'guidance.png');
     if (fs.existsSync(imgPath)) {
@@ -84,13 +77,15 @@ app.post('/api/chat', async (req, res) => {
         // Add user message to history
         chatHistory.push({ role: "user", content: userMessage });
 
-        const completion = await openai.chat.completions.create({
-            messages: chatHistory,
-            model: "gpt-3.5-turbo", // Or any model supported by the proxy
-            max_tokens: 200,
-        });
+        let replyText = "";
 
-        const replyText = completion.choices[0].message.content;
+        if (PROVIDER === 'openai') {
+            replyText = await callOpenAI(chatHistory);
+        } else if (PROVIDER === 'gemini') {
+            replyText = await callGemini(chatHistory);
+        } else {
+            throw new Error('Invalid Provider Configuration');
+        }
 
         // Add assistant response to history
         chatHistory.push({ role: "assistant", content: replyText });
@@ -98,12 +93,85 @@ app.post('/api/chat', async (req, res) => {
         res.json({ reply: replyText });
 
     } catch (error) {
-        console.error('Error calling OpenAI API:', error);
+        console.error('API Error:', error);
         res.status(500).json({ reply: "通信障害が発生しました... 再送してください..." });
     }
 });
 
+
+// --- API Functions ---
+
+async function callOpenAI(messages) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error('OPENAI_API_KEY is not set');
+
+    const response = await fetch(OPENAI_API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: OPENAI_MODEL,
+            messages: messages,
+            max_tokens: 200
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("OpenAI API Error:", errorText);
+        throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
+async function callGemini(messages) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
+
+    // Convert OpenAI-style messages to Gemini history
+    const contents = messages
+        .filter(m => m.role !== 'system') // Gemini uses system_instruction separately or we simplify
+        .map(m => ({
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: [{ text: m.content }]
+        }));
+
+    // Handle system prompt if present (simple prepend for now)
+    const systemMsg = messages.find(m => m.role === 'system');
+    let finalContents = contents;
+
+    // Note: older Gemini API or specific models might handle system instructions differently.
+    // For simplicity with gemini-1.5-flash, we can pass system instruction in config or just rely on prompt.
+    // Here we just ensure we send a valid contents array.
+
+    const url = `${GEMINI_API_BASE_URL}${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: finalContents,
+            generationConfig: {
+                maxOutputTokens: 200
+            }
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Gemini API Error:", errorText);
+        throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
+}
+
 server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Open http://localhost:${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Provider: ${PROVIDER}`);
 });

@@ -2,10 +2,10 @@
 <html>
 
 <head>
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="-1" />
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Controller</title>
+    <link rel="stylesheet" href="css/style.css">
 
     <script type="module">
         import { io } from "https://cdn.socket.io/4.5.1/socket.io.esm.min.js";
@@ -19,25 +19,25 @@
 
             let decPlaces = 2;
             let interval = 50; // 20 fps
-            let alpha = 0,
-                beta = 0,
-                gamma = 0;
+            let alpha = 0, beta = 0, gamma = 0;
             let z = 0;
 
             const socket = io();
 
-            // socket.emit("join", "game");
-
-            document.querySelector("#contents").textContent =
-                "接続されました。あなたのIDは：" + devid;
-            document.querySelector("#content").style.backgroundColor =
-                getColorFromId(devid);
+            // Setup UI
+            const connectBtn = document.getElementById("connect-btn");
+            const statusText = document.getElementById("status-text");
 
             if (!("WebSocket" in window)) {
                 alert("ブラウザがWebSocketsをサポートしていません");
             }
 
-            document.querySelector("#connect").addEventListener("click", () => {
+            connectBtn.addEventListener("click", () => {
+                // Change UI state
+                connectBtn.textContent = "接続済み";
+                connectBtn.style.opacity = "0.5";
+
+                // Start sensor loop
                 setInterval(() => {
                     socket.emit("sensor", {
                         id: devid,
@@ -47,82 +47,87 @@
                         z: z,
                     });
                 }, interval);
-                document.querySelector("#connect").style.display = "none";
+
                 request_permission();
             });
 
-            function getColorFromId(id) {
-                let hash = 0;
-                for (let i = 0; i < id.length; i++) {
-                    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-                }
-                const h = Math.abs(hash % 360);
-                return `hsl(${h}, 60%, 65%)`;
-            }
-
             window.ondevicemotion = (event) => {
-                z = event.accelerationIncludingGravity.z.toFixed(decPlaces);
+                if (event.accelerationIncludingGravity && event.accelerationIncludingGravity.z) {
+                    z = event.accelerationIncludingGravity.z.toFixed(decPlaces);
+                }
             };
 
             window.ondeviceorientation = (event) => {
-                alpha = event.alpha.toFixed(decPlaces);
-                beta = event.beta.toFixed(decPlaces);
-                gamma = event.gamma.toFixed(decPlaces);
+                if (event.alpha) alpha = event.alpha.toFixed(decPlaces);
+                if (event.beta) beta = event.beta.toFixed(decPlaces);
+                if (event.gamma) gamma = event.gamma.toFixed(decPlaces);
             };
 
             function request_permission() {
                 if (
-                    DeviceMotionEvent &&
+                    typeof DeviceMotionEvent !== 'undefined' &&
                     typeof DeviceMotionEvent.requestPermission === "function"
                 ) {
-                    DeviceMotionEvent.requestPermission();
+                    DeviceMotionEvent.requestPermission()
+                        .then(response => {
+                            if (response == 'granted') {
+                                // permission granted
+                            }
+                        })
+                        .catch(console.error);
                 }
                 if (
-                    DeviceOrientationEvent &&
+                    typeof DeviceOrientationEvent !== 'undefined' &&
                     typeof DeviceOrientationEvent.requestPermission === "function"
                 ) {
-                    DeviceOrientationEvent.requestPermission();
+                    DeviceOrientationEvent.requestPermission()
+                        .then(response => {
+                            if (response == 'granted') {
+                                // permission granted
+                            }
+                        })
+                        .catch(console.error);
                 }
             }
+
+            // Chat/Send logic (Placeholder for now as specific logic wasn't in original smart.html)
+            document.getElementById('mobile-send-btn').addEventListener('click', () => {
+                const msg = document.getElementById('mobile-input').value;
+                if (msg) {
+                    socket.emit("chat_message", { id: devid, text: msg }); // Assuming server handles this
+                    document.getElementById('mobile-input').value = '';
+                }
+            });
         });
     </script>
-
-    <style>
-        #connect {
-            width: 15%;
-            height: 24px;
-        }
-
-        #content {
-            background-color: #ccc;
-        }
-
-        .space {
-            height: 24px;
-        }
-    </style>
 </head>
 
 <body>
-    <center>
-        <div id="content">
-            <div class="space"></div>
-            <input id="connect" type="button" value="接続" />
-            <div>
-                <div class="space"></div>
-                <p id="contents">デバイスを傾けて下さい</p>
+    <div class="mobile-container">
+        <div class="mobile-header">
+            宇宙ステーションと通信してみよう
+        </div>
+
+        <div class="connect-section">
+            <button id="connect-btn" class="connect-btn">接続する</button>
+        </div>
+
+        <div class="instruction-text">
+            「0, 0」座標を宇宙ステーションと合わせてみましょう
+        </div>
+
+        <!-- Touch/Sensor Area Visualization -->
+        <div class="touchpad-area">
+            <!-- Could visualise tilt here if needed -->
+        </div>
+
+        <div class="mobile-footer">
+            <div class="mobile-input-group">
+                <input type="text" id="mobile-input" placeholder="">
+                <button id="mobile-send-btn">送信</button>
             </div>
         </div>
-
-        <p style="margin: 20px; font-size: 1.2em;">
-            スマートフォンを前後左右に傾けて操作します。<br>
-            「接続」ボタンを押して開始してください。
-        </p>
-
-        <div id="footer">
-            <h4>スマホセンサー</h4>
-        </div>
-    </center>
+    </div>
 </body>
 
 </html>

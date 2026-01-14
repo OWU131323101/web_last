@@ -1,133 +1,264 @@
 :root {
-    --bg-color: #0b0d17;
-    --text-color: #d0d6f9;
+    --bg-color: #1a1a1a;
+    --text-color: #ffffff;
     --accent-color: #00d4ff;
-    --panel-bg: rgba(255, 255, 255, 0.05);
+    --panel-bg: #4a4a55;
+    --input-bg: #ffffff;
+    --header-bg: #222222;
 }
 
 body {
     margin: 0;
     padding: 0;
-    font-family: 'Courier New', sans-serif;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
-    overflow: hidden; /* Prevent scrolling, full app feel */
+    overflow: hidden;
 }
 
+/* Common UI Elements */
+input[type="text"] {
+    border-radius: 4px;
+    border: none;
+    padding: 8px;
+    font-size: 1rem;
+}
+
+button.primary-btn {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* =========================================
+   Desktop (index.html) Styles
+   ========================================= */
 #ui-container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
     display: flex;
     flex-direction: column;
+    height: 100vh;
+    width: 100vw;
 }
 
-header {
-    background: linear-gradient(90deg, #000, #1a1a2e);
-    padding: 1rem;
+/* Desktop Header */
+#desktop-header {
+    background-color: var(--header-bg);
+    padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 2px solid var(--accent-color);
-    z-index: 10;
 }
 
-h1 {
-    margin: 0;
+#desktop-header h1 {
     font-size: 1.2rem;
-    letter-spacing: 2px;
+    font-weight: normal;
+    margin: 0;
 }
 
-#status-panel {
+.header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
     font-size: 0.8rem;
-    text-align: right;
+}
+
+#show-qr-btn {
+    background: transparent;
+    border: 1px solid var(--panel-bg);
+    color: #ccc;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+/* Main Split View */
+#main-split {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Left Pane: Visualization */
+#left-pane {
+    flex: 1;
+    position: relative;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.pane-info {
+    margin-bottom: 20px;
+    font-size: 1rem;
+    line-height: 1.5;
 }
 
 #canvas-container {
-    flex-grow: 1;
-    position: relative;
-    z-index: 1;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* P5.js canvas usually appends itself here */
 }
 
-/* Chat Interface Overlay */
-#chat-interface {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    width: 300px;
-    max-height: 40vh;
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid var(--accent-color);
-    border-radius: 8px;
+/* Right Pane: Chat/Status */
+#right-pane {
+    width: 350px; /* Fixed width for chat panel */
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    z-index: 20;
-    backdrop-filter: blur(5px);
+    background-color: #222; /* Slightly different bg for contrast */
 }
 
-#chat-window {
-    height: 200px;
-    overflow-y: auto;
+.status-label {
+    color: #ff4444; /* "Status: Connection" usually red or green */
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    text-align: right;
+}
+
+#chat-box {
+    flex: 1;
+    background-color: var(--panel-bg);
+    border-radius: 10px;
+    margin-bottom: 10px;
     padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    overflow-y: auto;
+    border: 3px solid var(--accent-color);
 }
 
+.chat-input-area {
+    display: flex;
+    gap: 10px;
+    background: white;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+.chat-input-area input {
+    flex: 1;
+    outline: none;
+}
+
+.chat-input-area button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 15px;
+    cursor: pointer;
+}
+
+
+/* =========================================
+   Mobile (smart.html) Styles
+   ========================================= */
+.mobile-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 0;
+    background-color: #222;
+}
+
+.mobile-header {
+    background-color: #111;
+    padding: 15px;
+    text-align: center;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #333;
+}
+
+.connect-section {
+    padding: 20px;
+    text-align: center;
+    border-bottom: 2px solid var(--accent-color);
+}
+
+.connect-btn {
+    width: 80%;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--panel-bg);
+    color: white;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.instruction-text {
+    padding: 15px;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.touchpad-area {
+    flex: 1;
+    margin: 10px 20px;
+    background-color: var(--panel-bg);
+    border-radius: 15px;
+    border: 3px solid var(--accent-color);
+    position: relative;
+    /* This is where users might touch or tilt - can be visual only */
+}
+
+.mobile-footer {
+    padding: 10px 20px 30px 20px; /* Extra bottom padding for safe area */
+}
+
+.mobile-input-group {
+    display: flex;
+    background: white;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+.mobile-input-group input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 5px;
+}
+
+.mobile-input-group button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 15px;
+}
+
+/* =========================================
+   Existing Chat Message Styles
+   ========================================= */
 .message {
     padding: 8px;
     border-radius: 4px;
     font-size: 0.9rem;
-    max-width: 80%;
+    margin-bottom: 5px;
+    max-width: 90%;
 }
 
 .message.user {
     background: var(--accent-color);
     color: #000;
     align-self: flex-end;
+    margin-left: auto;
 }
 
 .message.bot {
-    background: var(--panel-bg);
-    border: 1px solid #ffffff50;
+    background: rgba(255,255,255,0.1);
     align-self: flex-start;
 }
 
-#input-area {
-    display: flex;
-    border-top: 1px solid var(--panel-bg);
-    padding: 5px;
-}
-
-#user-input {
-    flex-grow: 1;
-    background: transparent;
-    border: none;
-    color: white;
-    padding: 5px;
-    outline: none;
-}
-
-#send-btn {
-    background: var(--accent-color);
-    border: none;
-    color: black;
-    padding: 5px 10px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-#sensor-controls {
-    position: absolute;
-    top: 80px;
-    left: 20px;
-    z-index: 20;
-}
-
-#enable-sensors {
-    background: rgba(0, 212, 255, 0.2);
-    border: 1px solid var(--accent-color);
-    color: var(--accent-color);
-    padding: 10px;
-    cursor: pointer;
+.message.system {
+    color: #888;
+    font-size: 0.8rem;
+    text-align: center;
+    width: 100%;
 }
