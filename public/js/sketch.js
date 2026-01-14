@@ -9,7 +9,7 @@ function setup() {
     canvas.parent('canvas-container');
 
     // ランダムな星を作成
-    for (let i = 0; i < 800; i++) {
+    for (let i = 0; i < 500; i++) {
         stars.push({
             x: random(-2000, 2000),
             y: random(-2000, 2000),
