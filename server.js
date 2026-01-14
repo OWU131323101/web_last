@@ -39,7 +39,7 @@ const OPENAI_API_ENDPOINT = 'https://openai-api-proxy-746164391621.us-west1.run.
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
-// --- 汎用ヘルパー: プロンプトの読み込みと処理 ---
+// --- プロンプトの読み込みと処理 ---
 function fs_readFile(path) {
     try {
         return fs.readFileSync(path, 'utf8');
@@ -73,7 +73,7 @@ io.on('connection', (socket) => {
         console.log('ユーザーが切断しました');
     });
 
-    // センサーデータを全クライアントに転送 (デスクトップ視覚化用)
+    // センサーデータを全クライアントに転送
     socket.on('sensor', (data) => {
         socket.broadcast.emit('sensor_update', data);
     });
@@ -97,11 +97,6 @@ io.on('connection', (socket) => {
             io.emit('chat_broadcast', { text: "通信エラーが発生しました...", role: 'system' });
         }
     });
-
-    // ユーザーが標準的なソケット実装を希望する場合の基本的な "chat message" イベントサポート
-    socket.on('chat message', (msg) => {
-        io.emit('chat message', msg);
-    });
 });
 
 // --- ルート ---
@@ -121,39 +116,28 @@ app.get('/guidance.png', (req, res) => {
 
 // 汎用ハンドラーロジック
 async function handleChatLogic(userMessage, target = 'iss') {
-    // 1. ターゲットに基づいてプロンプトファイルを決定
+    // ターゲットに基づいてプロンプトファイルを設定
     let promptFile = 'prompt.md';
     if (target === 'alien') {
         promptFile = 'prompt_alien.md';
         console.log("宇宙人のペルソナで回答を作成中");
     }
 
-    // 2. プロンプトのロード
+    // プロンプトのロード
     const promptPath = path.join(__dirname, promptFile);
-    // fs_readFileヘルパーまたは直接fsを使用
-    let rawPrompt = "";
-    try {
-        rawPrompt = fs.readFileSync(promptPath, 'utf8');
-    } catch (e) {
-        console.error("プロンプト読み込みエラー", e);
-        rawPrompt = "あなたは助手です。";
-    }
+    // fs_readFileヘルパーを使用
+    let rawPrompt = fs_readFile(promptPath) || "あなたは助手です。";
 
-    // 3. 変数置換
-    // 日付のような汎用的なコンテキストを渡す
+    // 変数置換
     const variables = {
         date: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
         previous_chat: chatHistory.map(m => `${m.role}: ${m.content}`).join('\n'), // 単純な履歴ダンプ
         user_message: userMessage
     };
 
-    // 注: prompt_alien.md は私の作成に基づいて ${previous_chat} と ${user_message} を期待しています。
-    // prompt.md もそれらを持っていない場合は更新が必要かもしれません？
-    // prompt.md が以前に更新されたか、processPrompt が欠落しているキーを適切に処理すると仮定します（処理します）。
-
     const systemInstruction = processPrompt(rawPrompt, variables);
 
-    // 4. 履歴の更新 システムプロンプトロジック
+    // 履歴の更新 システムプロンプトロジック
     // システムプロンプトが常に最初の項目であり、最新であることを確認します
     const systemMsg = { role: "system", content: systemInstruction };
 
@@ -184,8 +168,6 @@ app.post('/api/chat', async (req, res) => {
     try {
         const userMessage = req.body.message;
         if (!userMessage) {
-            // メッセージがない場合、直接の生成リクエストかもしれません？
-            // 今のところ、チャットアプリのためにメッセージの存在を厳密にします
             return res.status(400).json({ error: 'メッセージが必要です' });
         }
 
@@ -234,13 +216,13 @@ async function callGemini(messages) {
 
     // OpenAIスタイルのメッセージをGeminiの履歴に変換
     const contents = messages
-        .filter(m => m.role !== 'system') // Geminiはsystem_instructionを使用するか、contents内のsystemロールを無視します
+        .filter(m => m.role !== 'system')
         .map(m => ({
             role: m.role === 'user' ? 'user' : 'model',
             parts: [{ text: m.content }]
         }));
 
-    // システムプロンプトがある場合の処理 (今のところ単純に先頭に追加)
+    // システムプロンプトがある場合の処理
     const systemMsg = messages.find(m => m.role === 'system');
     let finalContents = contents;
 
