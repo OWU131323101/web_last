@@ -9,7 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // sketch.js からアクセスするためのグローバルアプリ状態
     window.app = {
         issData: null,
-        sensors: sensors
+        sensors: sensors,
+        // アラインメント状態をサーバーに報告する関数
+        reportAlignment: function (isAligned) {
+            if (socket && socket.connected) {
+                socket.emit('alignment_update', isAligned);
+            }
+        }
     };
     window.showUFO = false;
 

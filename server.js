@@ -61,6 +61,8 @@ function processPrompt(template, variables) {
 
 // チャット履歴 (このセッション用のメモリ内保存)
 let chatHistory = [];
+// 現在のUFOアラインメント状態 (デスクトップから報告される)
+let alignment_status = false;
 
 // システムペルソナパスの初期化
 const promptPath = path.join(__dirname, 'prompt.md');
@@ -78,6 +80,13 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('sensor_update', data);
     });
 
+    // デスクトップからのアラインメント状態更新を受け取る
+    socket.on('alignment_update', (isAligned) => {
+        alignment_status = isAligned;
+        // 必要ならログ出力
+        // console.log("Alignment updated:", alignment_status);
+    });
+
     // モバイルからのチャット処理
     socket.on('chat_message', async (data) => {
         const userMessage = data.text;
@@ -88,7 +97,10 @@ io.on('connection', (socket) => {
 
         // /api/chat のロジックを再利用
         try {
-            const target = data.target || 'iss';
+            // モバイルなどからのメッセージでは target が指定されない場合があるため
+            // サーバー側で保持している alignment_status を優先的に使用して判定する
+            const target = alignment_status ? 'alien' : 'iss';
+
             const replyText = await handleChatLogic(userMessage, target);
             // AIの返答をブロードキャスト
             io.emit('chat_broadcast', { text: replyText, role: 'bot' });

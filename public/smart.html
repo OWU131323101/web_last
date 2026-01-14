@@ -11,8 +11,8 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Socket.ioの初期化
-            const socket = io();
+            // Socket.ioの初期化 (接続ボタン押下まで遅延)
+            let socket = null;
 
             // デバイスIDの生成・取得
             let devid = sessionStorage.getItem('clientId');
@@ -38,17 +38,28 @@
                 connectBtn.addEventListener("click", () => {
                     request_permission();
 
+                    if (!socket) {
+                        socket = io();
+
+                        // 4. チャット受信 (接続後に設定)
+                        socket.on('chat_broadcast', (data) => {
+                            addMessage(data.text, data.role);
+                        });
+                    }
+
                     if (!isSensorRunning) {
                         isSensorRunning = true;
-                        connectBtn.textContent = "送信中...";
+                        connectBtn.textContent = "送信中... (接続済み)";
                         connectBtn.style.opacity = "0.7";
 
                         // センサーデータ送信ループ開始
                         setInterval(() => {
-                            socket.emit("sensor", {
-                                id: devid,
-                                a: alpha, b: beta, g: gamma, z: z
-                            });
+                            if (socket && socket.connected) {
+                                socket.emit("sensor", {
+                                    id: devid,
+                                    a: alpha, b: beta, g: gamma, z: z
+                                });
+                            }
                         }, interval);
                     }
                 });
@@ -90,18 +101,17 @@
                 sendBtn.addEventListener('click', () => {
                     const msg = inputField.value;
                     if (msg) {
-                        socket.emit("chat_message", { id: devid, text: msg });
-                        inputField.value = '';
+                        if (socket && socket.connected) {
+                            socket.emit("chat_message", { id: devid, text: msg });
+                            inputField.value = '';
+                        } else {
+                            addMessage("未接続です。上のボタンで接続してください。", "system");
+                        }
                     }
                 });
             }
 
-            // 4. チャット受信
-            socket.on('chat_broadcast', (data) => {
-                // 自分のメッセージかどうかの簡易判定 (IDチェックがあればより正確)
-                // ここでは role が user か bot かで表示分け
-                addMessage(data.text, data.role);
-            });
+
         });
     </script>
 </head>
@@ -123,7 +133,7 @@
         <!-- チャットログエリア (旧タッチパッドエリアを再利用) -->
         <div class="touchpad-area" id="mobile-chat-log"
             style="overflow-y: auto; display: flex; flex-direction: column; padding: 10px;">
-            <div class="message system">通信接続待機中...</div>
+            <div class="message system">接続ボタンを押して開始...</div>
         </div>
 
         <div class="mobile-footer">

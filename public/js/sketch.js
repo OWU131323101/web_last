@@ -9,14 +9,17 @@ function setup() {
     canvas.parent('canvas-container');
 
     // ランダムな星を作成
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 1000; i++) {
         stars.push({
-            x: random(-width, width),
-            y: random(-height, height),
-            z: random(-1000, -500) // 背景
+            x: random(-2000, 2000),
+            y: random(-2000, 2000),
+            z: random(-2000, 2000)
         });
     }
 }
+
+// 前回のアラインメント状態を保持
+let previousAlignmentState = false;
 
 function windowResized() {
     let container = document.getElementById('canvas-container');
@@ -162,6 +165,13 @@ function draw() {
     // Main.js で使用するためのアラインメント状態のエクスポート
     if (window.app) {
         window.app.isUfoAligned = isUfoAligned;
+
+        // 状態が変化したときだけ報告
+        if (window.app.reportAlignment && isUfoAligned !== previousAlignmentState) {
+            window.app.reportAlignment(isUfoAligned);
+            previousAlignmentState = isUfoAligned;
+            if (isUfoAligned) console.log("UFO Locked!");
+        }
     }
 
     push();
