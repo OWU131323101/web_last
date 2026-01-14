@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.app = {
         issData: null,
         sensors: sensors,
+        isMobileConnected: false, // モバイル接続状態
         // アラインメント状態をサーバーに報告する関数
         reportAlignment: function (isAligned) {
             if (socket && socket.connected) {
@@ -35,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.on('sensor_update', (data) => {
             // sketch.js 用にグローバルセンサー状態を更新
             window.app.sensors.updateFromSocket(data);
+            window.app.isMobileConnected = true; // 接続フラグを有効化
 
             // UIを更新
             if (myCoordsEl) {

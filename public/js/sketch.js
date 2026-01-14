@@ -9,7 +9,7 @@ function setup() {
     canvas.parent('canvas-container');
 
     // ランダムな星を作成
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 800; i++) {
         stars.push({
             x: random(-2000, 2000),
             y: random(-2000, 2000),
@@ -69,8 +69,9 @@ function draw() {
     directionalLight(255, 255, 255, 1, 1, -1);
 
     // 地球
-    // ロジック: 接続されている場合 (issData がある場合) は非表示、それ以外は不透明で表示
-    if (!window.app || !window.app.issData) {
+    // ロジック: モバイルが接続されている場合 (isMobileConnected) は非表示、それ以外は不透明で表示
+    // 接続ボタンを押すまでは地球が表示され、接続後にISS/宇宙空間モードになる
+    if (!window.app || !window.app.isMobileConnected) {
         push();
         translate(0, 0, 0);
         rotateY(frameCount * 0.005);
