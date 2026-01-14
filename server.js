@@ -61,10 +61,10 @@ function processPrompt(template, variables) {
 
 // チャット履歴 (このセッション用のメモリ内保存)
 let chatHistory = [];
-// 現在のUFOアラインメント状態 (デスクトップから報告される)
+// 現在のUFOアラインメント状態
 let alignment_status = false;
 
-// システムペルソナパスの初期化
+// ペルソナパスの初期化
 const promptPath = path.join(__dirname, 'prompt.md');
 
 // --- Socket.IO ---
@@ -83,8 +83,6 @@ io.on('connection', (socket) => {
     // デスクトップからのアラインメント状態更新を受け取る
     socket.on('alignment_update', (isAligned) => {
         alignment_status = isAligned;
-        // 必要ならログ出力
-        // console.log("Alignment updated:", alignment_status);
     });
 
     // モバイルからのチャット処理
@@ -97,8 +95,6 @@ io.on('connection', (socket) => {
 
         // /api/chat のロジックを再利用
         try {
-            // モバイルなどからのメッセージでは target が指定されない場合があるため
-            // サーバー側で保持している alignment_status を優先的に使用して判定する
             const target = alignment_status ? 'alien' : 'iss';
 
             const replyText = await handleChatLogic(userMessage, target);
@@ -143,14 +139,15 @@ async function handleChatLogic(userMessage, target = 'iss') {
     // 変数置換
     const variables = {
         date: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
-        previous_chat: chatHistory.map(m => `${m.role}: ${m.content}`).join('\n'), // 単純な履歴ダンプ
+        // システムメッセージを除外して、会話履歴のみをコンテキストとして渡す
+        previous_chat: chatHistory.filter(m => m.role !== 'system').map(m => `${m.role}: ${m.content}`).join('\n'),
         user_message: userMessage
     };
 
     const systemInstruction = processPrompt(rawPrompt, variables);
 
     // 履歴の更新 システムプロンプトロジック
-    // システムプロンプトが常に最初の項目であり、最新であることを確認します
+    // システムプロンプトが常に最初の項目であり、最新であることを確認
     const systemMsg = { role: "system", content: systemInstruction };
 
     if (chatHistory.length === 0) {
