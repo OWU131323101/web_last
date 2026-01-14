@@ -28,8 +28,8 @@ app.use((req, res, next) => {
 app.use(express.static('public'));
 
 // --- Configuration ---
-// const PROVIDER = 'openai';
-const PROVIDER = 'gemini';
+const PROVIDER = 'openai';
+// const PROVIDER = 'gemini';
 
 // OpenAI Configuration
 const OPENAI_MODEL = 'gpt-4o-mini';
@@ -39,20 +39,31 @@ const OPENAI_API_ENDPOINT = 'https://openai-api-proxy-746164391621.us-west1.run.
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
-// Load System Prompt
-const promptPath = path.join(__dirname, 'prompt.md');
-let systemPrompt = "You are a staff member on the ISS.";
-try {
-    systemPrompt = fs.readFileSync(promptPath, 'utf8');
-} catch (err) {
-    console.error("Failed to read prompt.md", err);
+// --- Generic Helper: Load and Process Prompt ---
+function fs_readFile(path) {
+    try {
+        return fs.readFileSync(path, 'utf8');
+    } catch (err) {
+        console.error(`Failed to read file ${path}`, err);
+        return "";
+    }
 }
 
-// Chat History
-const chatHistory = [
-    { role: "system", content: systemPrompt },
-    { role: "assistant", content: "了解しました。国際宇宙ステーション(ISS)の職員として振る舞います。" }
-];
+function processPrompt(template, variables) {
+    let processText = template;
+    for (const key in variables) {
+        const placeholder = "${" + key + "}";
+        // Replace all occurrences
+        processText = processText.split(placeholder).join(variables[key]);
+    }
+    return processText;
+}
+
+// Chat History (In-Memory for this session)
+let chatHistory = [];
+
+// Initialize System Persona path
+const promptPath = path.join(__dirname, 'prompt.md');
 
 // --- Socket.IO ---
 io.on('connection', (socket) => {
@@ -75,25 +86,20 @@ io.on('connection', (socket) => {
         // Broadcast user message so it appears on desktop
         io.emit('chat_broadcast', { text: userMessage, role: 'user' });
 
-        // Process with AI
+        // Reuse the logic from /api/chat
         try {
-            chatHistory.push({ role: "user", content: userMessage });
-
-            let replyText = "";
-            if (PROVIDER === 'openai') {
-                replyText = await callOpenAI(chatHistory);
-            } else if (PROVIDER === 'gemini') {
-                replyText = await callGemini(chatHistory);
-            }
-
-            chatHistory.push({ role: "assistant", content: replyText });
-
+            const replyText = await handleChatLogic(userMessage);
             // Broadcast AI reply
             io.emit('chat_broadcast', { text: replyText, role: 'bot' });
         } catch (error) {
             console.error("AI Error via Socket:", error);
             io.emit('chat_broadcast', { text: "通信エラーが発生しました...", role: 'system' });
         }
+    });
+
+    // Support basic "chat message" event if user desires standard socket implementation
+    socket.on('chat message', (msg) => {
+        io.emit('chat message', msg);
     });
 });
 
@@ -112,29 +118,53 @@ app.get('/guidance.png', (req, res) => {
     }
 });
 
+// Generic Handler Logic
+async function handleChatLogic(userMessage) {
+    // 1. Load Prompt (Dynamic Reloading for "Generic" Architecture)
+    const rawPrompt = fs_readFile(promptPath);
+
+    // 2. Variable Substitution (if any placeholders existed)
+    // We pass generic context like date
+    const systemInstruction = processPrompt(rawPrompt, { date: new Date().toISOString() });
+
+    // 3. Update History system prompt logic
+    // We ensure the system prompt is always the first item and up-to-date
+    const systemMsg = { role: "system", content: systemInstruction };
+
+    if (chatHistory.length === 0) {
+        chatHistory.push(systemMsg);
+    } else if (chatHistory[0].role === 'system') {
+        chatHistory[0] = systemMsg; // Update existing system prompt
+    } else {
+        // If history exists but no system prompt (unlikely), prepend
+        chatHistory.unshift(systemMsg);
+    }
+
+    chatHistory.push({ role: "user", content: userMessage });
+
+    let replyText = "";
+    if (PROVIDER === 'openai') {
+        replyText = await callOpenAI(chatHistory);
+    } else if (PROVIDER === 'gemini') {
+        replyText = await callGemini(chatHistory);
+    } else {
+        throw new Error('Invalid Provider Configuration');
+    }
+
+    chatHistory.push({ role: "assistant", content: replyText });
+    return replyText;
+}
+
 app.post('/api/chat', async (req, res) => {
     try {
         const userMessage = req.body.message;
         if (!userMessage) {
+            // If message is missing, maybe it's a direct generation request?
+            // For now, strict on message presence for chat app
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        // Add user message to history
-        chatHistory.push({ role: "user", content: userMessage });
-
-        let replyText = "";
-
-        if (PROVIDER === 'openai') {
-            replyText = await callOpenAI(chatHistory);
-        } else if (PROVIDER === 'gemini') {
-            replyText = await callGemini(chatHistory);
-        } else {
-            throw new Error('Invalid Provider Configuration');
-        }
-
-        // Add assistant response to history
-        chatHistory.push({ role: "assistant", content: replyText });
-
+        const replyText = await handleChatLogic(userMessage);
         res.json({ reply: replyText });
 
     } catch (error) {
@@ -179,7 +209,7 @@ async function callGemini(messages) {
 
     // Convert OpenAI-style messages to Gemini history
     const contents = messages
-        .filter(m => m.role !== 'system') // Gemini uses system_instruction separately or we simplify
+        .filter(m => m.role !== 'system') // Gemini uses system_instruction or we ignore system role in contents
         .map(m => ({
             role: m.role === 'user' ? 'user' : 'model',
             parts: [{ text: m.content }]
@@ -188,10 +218,6 @@ async function callGemini(messages) {
     // Handle system prompt if present (simple prepend for now)
     const systemMsg = messages.find(m => m.role === 'system');
     let finalContents = contents;
-
-    // Note: older Gemini API or specific models might handle system instructions differently.
-    // For simplicity with gemini-1.5-flash, we can pass system instruction in config or just rely on prompt.
-    // Here we just ensure we send a valid contents array.
 
     const url = `${GEMINI_API_BASE_URL}${GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
