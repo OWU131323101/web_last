@@ -69,12 +69,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 5000); // Check every 5 seconds
 
     // 2. Chat Logic
+    const chatBox = document.getElementById('chat-box'); // The scrollable container
+
     function addMessage(text, type) {
         const div = document.createElement('div');
         div.className = `message ${type}`;
         div.textContent = text;
         chatWindow.appendChild(div);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+
+        // Scroll the outer box
+        if (chatBox) {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
     }
 
     async function handleSend() {
