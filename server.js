@@ -88,7 +88,8 @@ io.on('connection', (socket) => {
 
         // Reuse the logic from /api/chat
         try {
-            const replyText = await handleChatLogic(userMessage);
+            const target = data.target || 'iss';
+            const replyText = await handleChatLogic(userMessage, target);
             // Broadcast AI reply
             io.emit('chat_broadcast', { text: replyText, role: 'bot' });
         } catch (error) {
@@ -119,15 +120,40 @@ app.get('/guidance.png', (req, res) => {
 });
 
 // Generic Handler Logic
-async function handleChatLogic(userMessage) {
-    // 1. Load Prompt (Dynamic Reloading for "Generic" Architecture)
-    const rawPrompt = fs_readFile(promptPath);
+async function handleChatLogic(userMessage, target = 'iss') {
+    // 1. Determine Prompt File based on target
+    let promptFile = 'prompt.md';
+    if (target === 'alien') {
+        promptFile = 'prompt_alien.md';
+        console.log("Creating Answer with ALIEN Persona");
+    }
 
-    // 2. Variable Substitution (if any placeholders existed)
+    // 2. Load Prompt
+    const promptPath = path.join(__dirname, promptFile);
+    // Use fs_readFile helper or direct fs
+    let rawPrompt = "";
+    try {
+        rawPrompt = fs.readFileSync(promptPath, 'utf8');
+    } catch (e) {
+        console.error("Prompt load error", e);
+        rawPrompt = "你是助手。";
+    }
+
+    // 3. Variable Substitution
     // We pass generic context like date
-    const systemInstruction = processPrompt(rawPrompt, { date: new Date().toISOString() });
+    const variables = {
+        date: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+        previous_chat: chatHistory.map(m => `${m.role}: ${m.content}`).join('\n'), // Simple history dump
+        user_message: userMessage
+    };
 
-    // 3. Update History system prompt logic
+    // Note: prompt_alien.md expects ${previous_chat} and ${user_message} based on my creation.
+    // prompt.md might also need update if it doesn't have them? 
+    // Assuming prompt.md was updated previously or processPrompt handles missing keys gracefully (it does).
+
+    const systemInstruction = processPrompt(rawPrompt, variables);
+
+    // 4. Update History system prompt logic
     // We ensure the system prompt is always the first item and up-to-date
     const systemMsg = { role: "system", content: systemInstruction };
 
@@ -136,7 +162,6 @@ async function handleChatLogic(userMessage) {
     } else if (chatHistory[0].role === 'system') {
         chatHistory[0] = systemMsg; // Update existing system prompt
     } else {
-        // If history exists but no system prompt (unlikely), prepend
         chatHistory.unshift(systemMsg);
     }
 
