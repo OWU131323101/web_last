@@ -82,6 +82,10 @@ button.primary-btn {
     display: flex;
     flex: 1;
     overflow: hidden;
+    flex-direction: row;
+    /* Explicitly row for Left/Right split */
+    height: calc(100vh - 80px);
+    /* Adjust for header height approx */
 }
 
 /* Left Pane: Visualization */

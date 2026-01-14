@@ -4,7 +4,11 @@ let earthTexture;
 let stars = [];
 
 function setup() {
-    let canvas = createCanvas(windowWidth, windowHeight - 100, WEBGL); // Adjust height for header
+    let container = document.getElementById('canvas-container');
+    let w = container ? container.clientWidth : windowWidth;
+    let h = container ? container.clientHeight : (windowHeight - 100);
+
+    let canvas = createCanvas(w, h, WEBGL);
     canvas.parent('canvas-container');
 
     // Create random stars
@@ -14,6 +18,17 @@ function setup() {
             y: random(-height, height),
             z: random(-1000, -500) // Background
         });
+    }
+}
+
+// ... draw() function remains same ...
+
+function windowResized() {
+    let container = document.getElementById('canvas-container');
+    if (container) {
+        resizeCanvas(container.clientWidth, container.clientHeight);
+    } else {
+        resizeCanvas(windowWidth, windowHeight - 100);
     }
 }
 
