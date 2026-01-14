@@ -70,10 +70,11 @@ function draw() {
 
     // 3. Earth (Fixed position relative to stars for now)
     push();
-    translate(0, 100, -500);
+    // User requested "Blue sphere and camera position overlap" (Earth = User position)
+    translate(0, 0, 0);
     rotateY(frameCount * 0.005);
     noStroke();
-    fill(0, 100, 200);
+    fill(0, 100, 200, 50); // Transparent blue to allow seeing through "center of earth"
     sphere(150);
     pop();
 
@@ -156,8 +157,8 @@ function draw() {
     if (ufoAlphaDiff > 180) ufoAlphaDiff = 360 - ufoAlphaDiff;
     let ufoBetaDiff = abs(ufoBeta - currentBeta);
 
-    // Threshold widened to 30 degrees
-    let isUfoAligned = (ufoAlphaDiff < 30 && ufoBetaDiff < 30);
+    // Narrower threshold based on user feedback (20 degrees)
+    let isUfoAligned = (ufoAlphaDiff < 20 && ufoBetaDiff < 20);
 
     // Export alignment state for Main.js to use
     if (window.app) {
