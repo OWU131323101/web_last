@@ -1,6 +1,3 @@
-let angle = 0;
-let issModel;
-let earthTexture;
 let stars = [];
 
 function setup() {
@@ -55,7 +52,7 @@ function draw() {
 
     // --- 環境 ---
 
-    // 1. 星を描画 (背景)
+    // 星を描画 (背景)
     push();
     stroke(255);
     strokeWeight(2);
@@ -64,31 +61,30 @@ function draw() {
     }
     pop();
 
-    // 2. ライティング
+    // ライティング
     ambientLight(50);
     directionalLight(255, 255, 255, 1, 1, -1);
 
-    // 3. 地球 (今のところ星に対して固定位置)
+    // 地球
     // ロジック: 接続されている場合 (issData がある場合) は非表示、それ以外は不透明で表示
     if (!window.app || !window.app.issData) {
         push();
-        // ユーザーの要望「青い球体とカメラ位置が重なる」(地球 = ユーザーの位置)
         translate(0, 0, 0);
         rotateY(frameCount * 0.005);
         noStroke();
-        fill(0, 100, 200); // 不透明 (透明から元に戻しました)
+        fill(0, 100, 200);
         sphere(150);
         pop();
     }
 
-    // --- ゲームロジック: ISSを探せ ---
+    // --- ゲームロジック: ISSを探す ---
 
     let targetAlpha = 180;
     let targetBeta = 45;
     let r = 400; // 軌道半径
     let x, y, z;
 
-    // 利用可能な場合は実際のAPIデータを使用
+    // 実際のAPIデータを使用
     if (window.app && window.app.issData && window.app.issData.latitude) {
         let lat = radians(parseFloat(window.app.issData.latitude));
         let lon = radians(parseFloat(window.app.issData.longitude));
@@ -123,7 +119,7 @@ function draw() {
 
     let isAligned = (alphaDiff < 20 && betaDiff < 20);
 
-    // 4. ISSを描画
+    // ISSを描画
     push();
     translate(x, y, z);
 
@@ -151,7 +147,7 @@ function draw() {
 
     pop();
 
-    // 5. UFOを描画 (シークレット)
+    // UFOを描画
     let ufoAlpha = 0; // 北
     let ufoBeta = 30; // 少し上
 
@@ -160,7 +156,7 @@ function draw() {
     if (ufoAlphaDiff > 180) ufoAlphaDiff = 360 - ufoAlphaDiff;
     let ufoBetaDiff = abs(ufoBeta - currentBeta);
 
-    // ユーザーフィードバックに基づく狭い閾値 (20度)
+    // 判定範囲の調整
     let isUfoAligned = (ufoAlphaDiff < 20 && ufoBetaDiff < 20);
 
     // Main.js で使用するためのアラインメント状態のエクスポート
@@ -184,7 +180,7 @@ function draw() {
     if (isUfoAligned) {
         // 視覚的合図: 点滅または拡大縮小
         scale(1.2);
-        stroke(255, 0, 255); // マゼンタ色のロックオン
+        stroke(255, 0, 255); // ロックオン
         noFill();
         circle(0, 0, 50);
     }

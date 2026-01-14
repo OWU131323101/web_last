@@ -101,13 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             inputField.value = '';
             // ブロードキャストを待つ場合は、ここで addMessage をすぐには呼び出しません。
-            // 応答性のために呼ぶこともできますが、ブロードキャストが戻ってきたときの重複を避けるため...
-            // 標準パターン:
-            // 1. 楽観的追加？ -> 重複排除ロジックが必要。
-            // 2. ブロードキャスト待ち？ -> 待つだけ。サーバーは十分速い。
-
-            // 一時的なロード状態を追加するか、単に待機します。
-            // 実際、既存の socket.on('chat_broadcast') が表示を処理します。
 
         } else {
             // ソケットが失敗した場合のフォールバック（厳格なファイアウォールなど）、この設定では考えにくいですが
@@ -125,11 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') handleSend();
     });
 
-    // 3. UFOイベント (旧ロジック削除済み)
-    // 現在は sketch.js のアラインメント判定を使用しているため、
-    // ここでのキーワード判定やイベントリスナーは不要です。
-
-    // 4. センサーとQRコード
+    // センサーとQRコード
     const showQrBtn = document.getElementById('show-qr-btn'); // 更新されたID
     const qrOverlay = document.getElementById('qr-overlay');
     const closeQrBtn = document.getElementById('close-qr');
@@ -139,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showQrBtn.addEventListener('click', () => {
             qrOverlay.style.display = 'block';
             if (!qrCodeObj) {
-                // 以前のものがあればクリア（ロジックで防止されていますが）
+                // 以前のものがあればクリア
                 document.getElementById('qrcode').innerHTML = "";
                 qrCodeObj = new QRCode(document.getElementById("qrcode"), {
                     text: window.location.origin + "/smart",

@@ -25,67 +25,59 @@
             </div>
         </header>
 
-        <!-- Main Content (Split View) -->
-        <div id="main-split">
-            <!-- Left Pane: Visualization -->
-            <div id="left-pane">
-                <div class="pane-info">
-                    <div>宇宙ステーションの座標： <span id="iss-coords">Searching...</span></div>
-                    <div>あなたの座標： <span id="my-coords">Waiting...</span></div>
-                </div>
-                <div id="canvas-container">
-                    <!-- p5.js canvas will be injected here -->
+        <!-- メインコンテンツ (左右分割レイアウト) -->
+        <div class="split-container">
+            <!-- 左側: 3Dビジュアライザー (P5.js) -->
+            <div class="visualizer-pane">
+                <div id="canvas-container"></div>
+
+                <!-- オーバーレイ情報 -->
+                <div class="info-overlay">
+                    <div class="status-box">
+                        <span id="connection-status">接続中...</span>
+                        <div id="iss-coords">Lat: 0, Long: 0</div>
+                    </div>
+                    <!-- 自分の座標（デバッグ用・スマホからの受信データ） -->
+                    <div id="my-coords" style="font-size: 0.8em; color: gray; margin-top: 5px;"></div>
+
+                    <button id="show-qr-btn" class="action-btn">スマホで操作</button>
                 </div>
             </div>
 
-            <!-- Right Pane: Chat & Status -->
-            <div id="right-pane">
-                <div class="status-label">状態： <span id="connection-status">未接続</span></div>
-
-                <!-- Chat History Box -->
-                <div id="chat-box">
-                    <div id="chat-window">
-                        <div class="message system">通信待機中...</div>
+            <!-- 右側: チャットインターフェース -->
+            <div class="chat-pane">
+                <div class="chat-header">
+                    <h2>Mission Control</h2>
+                </div>
+                <div id="chat-window" class="chat-window">
+                    <div id="chat-box" class="chat-box">
+                        <!-- メッセージはここに動的に追加されます -->
                     </div>
                 </div>
-
-                <!-- Input Area -->
-                <div class="chat-input-area">
-                    <input type="text" id="user-input" placeholder="メッセージ...">
+                <div class="input-area">
+                    <input type="text" id="user-input" placeholder="メッセージを入力...">
                     <button id="send-btn">送信</button>
                 </div>
             </div>
         </div>
+
+        <!-- QRコードモーダル -->
+        <div id="qr-overlay" class="qr-overlay" style="display: none;">
+            <div class="qr-card">
+                <h3>スマホでスキャン</h3>
+                <div id="qrcode"></div>
+                <p>スマホを傾けて視点を操作できます</p>
+                <button id="close-qr" class="close-btn">閉じる</button>
+            </div>
+        </div>
     </div>
 
-    <!-- QR Code Overlay (Hidden by default) -->
-    <div id="qr-overlay"
-        style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:20px; z-index:100; border-radius:10px; text-align:center; color:black; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
-        <h3>Scan to Connect</h3>
-        <div id="qrcode"></div>
-        <button id="close-qr" style="margin-top:15px; padding:5px 15px; cursor:pointer;">Close</button>
-    </div>
-
-    <!-- Scripts -->
+    <!-- 外部ファイルの読み込み -->
     <script src="js/api.js"></script>
     <script src="js/sensors.js"></script>
     <script src="js/sketch.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/main.js"></script>
-
-    <!-- Bridge script to map new IDs to old logic if necessary -->
-    <script>
-        // Mapping old IDs to new layout if JS relies on them
-        // Note: JS logic seems to use 'user-input', 'send-btn', 'chat-window', 'qrcode' which are preserved.
-        // 'iss-lat', 'iss-long' might need attention if they updated individually.
-        document.getElementById('show-qr-btn').addEventListener('click', () => {
-            document.getElementById('qr-overlay').style.display = 'block';
-            // Re-trigger QR generation if needed in main.js
-        });
-        document.getElementById('close-qr').addEventListener('click', () => {
-            document.getElementById('qr-overlay').style.display = 'none';
-        });
-    </script>
 </body>
 
 </html>
