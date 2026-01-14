@@ -87,20 +87,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = inputField.value.trim();
         if (!text) return;
 
-        addMessage(text, 'user');
-        inputField.value = '';
+        // Verify socket availability
+        if (socket && socket.connected) {
+            // Trigger local effects (UFO) if needed, duplicating logic from chat.js for now
+            // or we can keep using StaffChat for utility but not for sending.
+            const lowerText = text.toLowerCase();
+            if (lowerText.includes("ufo") || lowerText.includes("宇宙人")) {
+                window.dispatchEvent(new CustomEvent('ufo-trigger'));
+            }
 
-        // Add loading indicator or plain wait
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'message bot';
-        loadingDiv.textContent = "...";
-        chatWindow.appendChild(loadingDiv);
+            // Send via Socket to allow server to broadcast to all (Desktop & Mobile)
+            // and process AI response there.
+            socket.emit('chat_message', { text: text });
 
-        const reply = await chat.processInput(text);
+            inputField.value = '';
+            // We do NOT addMessage here immediately if we wait for broadcast.
+            // But for responsiveness, we could. However, to avoid duplicate if broadcast comes back...
+            // Standard pattern: 
+            // 1. Optimistic add? -> Need dedup logic.
+            // 2. Wait for broadcast? -> Just wait. Server is fast enough.
 
-        // Remove loading and show reply
-        chatWindow.removeChild(loadingDiv);
-        addMessage(reply, 'bot');
+            // Let's add a temporary loading state or just wait.
+            // Actually, existing socket.on('chat_broadcast') will handle the display.
+
+        } else {
+            // Fallback if socket fails (e.g. strict firewall), though unlikely in this setup
+            console.warn("Socket not connected, falling back to HTTP");
+            addMessage(text, 'user');
+            inputField.value = '';
+
+            const reply = await chat.processInput(text);
+            addMessage(reply, 'bot');
+        }
     }
 
     sendBtn.addEventListener('click', handleSend);
