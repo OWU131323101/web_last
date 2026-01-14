@@ -109,15 +109,18 @@ button.primary-btn {
 
 /* Right Pane: Chat/Status */
 #right-pane {
-    width: 350px; /* Fixed width for chat panel */
+    width: 350px;
+    /* Fixed width for chat panel */
     padding: 20px;
     display: flex;
     flex-direction: column;
-    background-color: #222; /* Slightly different bg for contrast */
+    background-color: #222;
+    /* Slightly different bg for contrast */
 }
 
 .status-label {
-    color: #ff4444; /* "Status: Connection" usually red or green */
+    color: #ff4444;
+    /* "Status: Connection" usually red or green */
     font-size: 1.1rem;
     margin-bottom: 10px;
     text-align: right;
@@ -163,8 +166,13 @@ button.primary-btn {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    /* Fallback */
+    height: 100dvh;
+    /* Mobile viewport fix */
     padding: 0;
     background-color: #222;
+    overflow: hidden;
+    /* Prevent elastic scrolling */
 }
 
 .mobile-header {
@@ -199,6 +207,8 @@ button.primary-btn {
 
 .touchpad-area {
     flex: 1;
+    min-height: 0;
+    /* Crucial for nested flex scrolling if needed */
     margin: 10px 20px;
     background-color: var(--panel-bg);
     border-radius: 15px;
@@ -208,7 +218,8 @@ button.primary-btn {
 }
 
 .mobile-footer {
-    padding: 10px 20px 30px 20px; /* Extra bottom padding for safe area */
+    padding: 10px 20px 30px 20px;
+    /* Extra bottom padding for safe area */
 }
 
 .mobile-input-group {
@@ -252,7 +263,7 @@ button.primary-btn {
 }
 
 .message.bot {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     align-self: flex-start;
 }
 
