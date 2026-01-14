@@ -1,6 +1,6 @@
 class ISSApi {
     constructor() {
-        this.url = 'https://api.wheretheiss.at/v1/satellites/25544'; // HTTPS compatible
+        this.url = 'https://api.wheretheiss.at/v1/satellites/25544'; // HTTPS 互換
         this.data = null;
         this.lastUpdate = 0;
     }
@@ -8,10 +8,10 @@ class ISSApi {
     async fetchLocation() {
         try {
             const response = await fetch(this.url);
-            if (!response.ok) throw new Error('Network response was not ok');
+            if (!response.ok) throw new Error('ネットワーク応答が正常ではありません');
             const json = await response.json();
 
-            // wheretheiss.at returns latitude/longitude directly in root
+            // wheretheiss.at は緯度/経度をルート直下で返します
             if (json.latitude && json.longitude) {
                 this.data = {
                     latitude: json.latitude,
@@ -21,8 +21,8 @@ class ISSApi {
                 return this.data;
             }
         } catch (error) {
-            console.error('API Error:', error);
-            // Fallback mock data for demo if API fails (common with mixed content blocking)
+            console.error('API エラー:', error);
+            // APIが失敗した場合のデモ用フォールバックデータ（混合コンテンツブロックなどでよくある）
             return { latitude: '0', longitude: '0' };
         }
     }

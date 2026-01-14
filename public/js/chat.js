@@ -1,40 +1,25 @@
 class StaffChat {
-    constructor() {
-        this.messages = [];
-        this.responses = [
-            "ISSの現在の高度は約400kmです。",
-            "無重力空間では水は球体になります。",
-            "現在は実験モジュール「きぼう」のメンテナンス中です。",
-            "地球の青さはここから見ると格別ですよ。",
-            "今日は太陽フレアの影響が少し心配ですね。",
-            "補給船の到着を待っているところです。"
-        ];
-    }
-
     async processInput(text) {
-        // Updated to use Server-side Gemini API
+        // Socket.IOが使えない場合のバックアップ手段として機能
         try {
             const response = await fetch('/api/chat', {
-                method: 'POST',
+                method: 'POST', //データを送信
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ message: text })
             });
 
-            if (!response.ok) throw new Error('API Error');
+            if (!response.ok) throw new Error('API エラー');
 
+            // サーバーから返ってきたAIの返答を受け取る
             const data = await response.json();
 
-            // Check for trigger words in local logic for visual effects, 
-            // even though the AI handles the text response.
-            const lowerText = text.toLowerCase();
-            if (lowerText.includes("ufo") || lowerText.includes("宇宙人")) {
-                window.dispatchEvent(new CustomEvent('ufo-trigger'));
-            }
-
+            // AIの返答テキストを返す
             return data.reply;
+
         } catch (error) {
+            // エラー処理
             console.error(error);
             return "通信エラー: 応答を受信できませんでした。";
         }

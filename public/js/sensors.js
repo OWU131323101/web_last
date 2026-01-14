@@ -6,7 +6,7 @@ class SpaceSensors {
     }
 
     requestPermission() {
-        // iOS 13+ requires permission for motion sensors
+        // iOS 13+ ではモーションセンサーに許可が必要です
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
             DeviceMotionEvent.requestPermission()
                 .then(response => {
@@ -21,16 +21,16 @@ class SpaceSensors {
     }
 
     updateFromSocket(data) {
-        // data: { a: alpha, b: beta, g: gamma, z: z }
-        // Map to internal structure
-        // Note: 'a' in data is alpha (compass), 'b' is beta (front/back), 'g' is gamma (left/right)
-        // Adjusting mapping based on p5.js rotation expectations
+        // データ構造: { a: alpha, b: beta, g: gamma, z: z }
+        // 内部構造へのマッピング
+        // 注意: データの 'a' は alpha (コンパス), 'b' は beta (前後), 'g' は gamma (左右)
+        // p5.js の回転の期待値に基づいてマッピングを調整
         this.acceleration = {
-            x: parseFloat(data.g || 0), // Left/Right tilt
-            y: parseFloat(data.b || 0), // Front/Back tilt
-            z: parseFloat(data.a || 0)  // Compass (Alpha)
+            x: parseFloat(data.g || 0), // 左右の傾き
+            y: parseFloat(data.b || 0), // 前後の傾き
+            z: parseFloat(data.a || 0)  // コンパス (Alpha)
         };
-        // Trigger any listeners if needed, or sketch.js reads directly
+        // 必要に応じてリスナーをトリガーするか、sketch.js が直接読み取ります
     }
 
     startListeners() {
@@ -50,6 +50,6 @@ class SpaceSensors {
             );
         }
         this.isReady = true;
-        console.log("Sensors active");
+        console.log("センサーがアクティブになりました");
     }
 }

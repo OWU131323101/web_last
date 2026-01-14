@@ -1,43 +1,41 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("App Initialized");
+    console.log("アプリ初期化完了");
 
-    // Initialize modules
+    // モジュールの初期化
     const api = new ISSApi();
     const chat = new StaffChat();
     const sensors = new SpaceSensors();
 
-    // Global app state for sketch.js to access
+    // sketch.js からアクセスするためのグローバルアプリ状態
     window.app = {
         issData: null,
         sensors: sensors
     };
     window.showUFO = false;
 
-    // UI Elements
+    // UI要素
     const statusEl = document.getElementById('connection-status');
-    const coordsEl = document.getElementById('iss-coords'); // New single element for coords
+    const coordsEl = document.getElementById('iss-coords'); // 座標用の新しい単一要素
     const myCoordsEl = document.getElementById('my-coords');
     const chatWindow = document.getElementById('chat-window');
     const inputField = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
 
-    // Initialize Socket.io for Desktop
-    // Note: Assuming socket.io.js is loaded in index.html, which it wasn't explicitly in the provided file view but index.html usually has it or we can rely on window.io if loaded. 
-    // Wait, the index.html had <script src="js/main.js"> but didn't explicitly load socket.io client lib in the head? 
-    // Checking index from memory... wait, smart.html had it. index.html... let's check. 
-    // Assuming it is available or adding logic to be safe.
+    // デスクトップ用 Socket.io の初期化
+    // 注意: socket.io.js は index.html で読み込まれていると仮定しています
+    // smart.html にはありましたが、index.html にも追加されているはずです
 
     let socket;
     try {
         socket = io();
 
         socket.on('sensor_update', (data) => {
-            // Update global sensor state for sketch.js
+            // sketch.js 用にグローバルセンサー状態を更新
             window.app.sensors.updateFromSocket(data);
 
-            // Update UI
+            // UIを更新
             if (myCoordsEl) {
-                // Formatting for display
+                // 表示用にフォーマット
                 const a = parseFloat(data.a || 0).toFixed(1);
                 const b = parseFloat(data.b || 0).toFixed(1);
                 const g = parseFloat(data.g || 0).toFixed(1);
@@ -46,19 +44,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         socket.on('chat_broadcast', (msg) => {
-            addMessage(msg.text, msg.role); // Re-using existing addMessage function
+            addMessage(msg.text, msg.role); // 既存の addMessage 関数を再利用
         });
 
     } catch (e) {
-        console.error("Socket.io not found or failed", e);
+        console.error("Socket.io が見つからないか失敗しました", e);
     }
 
-    // 1. Start API Polling
+    // 1. APIポーリングの開始
     setInterval(async () => {
         const data = await api.fetchLocation();
         if (data) {
             window.app.issData = data;
-            // Format coordinates string
+            // 座標文字列のフォーマット
             const lat = parseFloat(data.latitude).toFixed(2);
             const long = parseFloat(data.longitude).toFixed(2);
             coordsEl.textContent = `Lat: ${lat}, Long: ${long}`;
@@ -66,10 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
             statusEl.textContent = "接続中";
             statusEl.style.color = "#00d4ff";
         }
-    }, 5000); // Check every 5 seconds
+    }, 5000); // 5秒ごとにチェック
 
-    // 2. Chat Logic
-    const chatBox = document.getElementById('chat-box'); // The scrollable container
+    // 2. チャットロジック
+    const chatBox = document.getElementById('chat-box'); // スクロール可能なコンテナ
 
     function addMessage(text, type) {
         const div = document.createElement('div');
@@ -77,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         div.textContent = text;
         chatWindow.appendChild(div);
 
-        // Scroll the outer box
+        // 外側のボックスをスクロール
         if (chatBox) {
             chatBox.scrollTop = chatBox.scrollHeight;
         }
@@ -87,23 +85,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = inputField.value.trim();
         if (!text) return;
 
-        // Verify socket availability
+        // ソケットの可用性を確認
         if (socket && socket.connected) {
-            // Trigger local effects (UFO) if needed, duplicating logic from chat.js for now
-            // or we can keep using StaffChat for utility but not for sending.
+            // チャット効果用のローカル効果（UFO）をトリガー（今のところchat.jsのロジックを複製）
             const lowerText = text.toLowerCase();
             if (lowerText.includes("ufo") || lowerText.includes("宇宙人")) {
                 window.dispatchEvent(new CustomEvent('ufo-trigger'));
             }
 
-            // Send via Socket to allow server to broadcast to all (Desktop & Mobile)
-            // and process AI response there.
+            // Socket経由で送信し、サーバーが全クライアント（デスクトップ＆モバイル）にブロードキャストし、
+            // そこでAI応答を処理できるようにする。
 
-            // Check UFO alignment from sketch.js
+            // sketch.js から UFO のアラインメントを確認
             let target = 'iss';
             if (window.app && window.app.isUfoAligned) {
                 target = 'alien';
-                console.log("Sending to ALIEN");
+                console.log("エイリアンに送信中");
             }
 
             socket.emit('chat_message', {
@@ -112,18 +109,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             inputField.value = '';
-            // We do NOT addMessage here immediately if we wait for broadcast.
-            // But for responsiveness, we could. However, to avoid duplicate if broadcast comes back...
-            // Standard pattern: 
-            // 1. Optimistic add? -> Need dedup logic.
-            // 2. Wait for broadcast? -> Just wait. Server is fast enough.
+            // ブロードキャストを待つ場合は、ここで addMessage をすぐには呼び出しません。
+            // 応答性のために呼ぶこともできますが、ブロードキャストが戻ってきたときの重複を避けるため...
+            // 標準パターン:
+            // 1. 楽観的追加？ -> 重複排除ロジックが必要。
+            // 2. ブロードキャスト待ち？ -> 待つだけ。サーバーは十分速い。
 
-            // Let's add a temporary loading state or just wait.
-            // Actually, existing socket.on('chat_broadcast') will handle the display.
+            // 一時的なロード状態を追加するか、単に待機します。
+            // 実際、既存の socket.on('chat_broadcast') が表示を処理します。
 
         } else {
-            // Fallback if socket fails (e.g. strict firewall), though unlikely in this setup
-            console.warn("Socket not connected, falling back to HTTP");
+            // ソケットが失敗した場合のフォールバック（厳格なファイアウォールなど）、この設定では考えにくいですが
+            console.warn("ソケット未接続、HTTPにフォールバック");
             addMessage(text, 'user');
             inputField.value = '';
 
@@ -137,25 +134,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') handleSend();
     });
 
-    // 3. UFO Event
+    // 3. UFOイベント
     window.addEventListener('ufo-trigger', () => {
-        console.log("UFO Spotted!");
+        console.log("UFO発見！");
         window.showUFO = true;
         setTimeout(() => {
-            window.showUFO = false; // Disappears after 10s
+            window.showUFO = false; // 10秒後に消える
         }, 10000);
     });
 
-    // 4. Sensors & QR Code
-    /* Sensors removed from desktop UI
+    // 4. センサーとQRコード
+    /* デスクトップUIからセンサーを削除
     sensorBtn.addEventListener('click', () => {
         sensors.requestPermission();
-        sensorBtn.style.display = 'none'; // Hide after click
+        sensorBtn.style.display = 'none'; // クリック後に非表示
         addMessage("センサーシステム: オンにしました。", "system");
     });
     */
 
-    const showQrBtn = document.getElementById('show-qr-btn'); // Updated ID
+    const showQrBtn = document.getElementById('show-qr-btn'); // 更新されたID
     const qrOverlay = document.getElementById('qr-overlay');
     const closeQrBtn = document.getElementById('close-qr');
     let qrCodeObj = null;
@@ -164,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showQrBtn.addEventListener('click', () => {
             qrOverlay.style.display = 'block';
             if (!qrCodeObj) {
-                // Clear previous if any (though logic prevents it)
+                // 以前のものがあればクリア（ロジックで防止されていますが）
                 document.getElementById('qrcode').innerHTML = "";
                 qrCodeObj = new QRCode(document.getElementById("qrcode"), {
                     text: window.location.origin + "/smart",
