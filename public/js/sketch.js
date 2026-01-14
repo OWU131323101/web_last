@@ -133,7 +133,7 @@ function draw() {
     }
 
     rotateY(frameCount * 0.02);
-    fill(255, 0, 0);
+    fill('#fffacd'); // LemonChiffon
     box(20); // ISS
 
     // Solar panels
