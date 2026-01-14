@@ -22,9 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-btn');
 
     // デスクトップ用 Socket.io の初期化
-    // 注意: socket.io.js は index.html で読み込まれていると仮定しています
-    // smart.html にはありましたが、index.html にも追加されているはずです
-
     let socket;
     try {
         socket = io();
@@ -51,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Socket.io が見つからないか失敗しました", e);
     }
 
-    // 1. APIポーリングの開始
+    // APIポーリングの開始
     setInterval(async () => {
         const data = await api.fetchLocation();
         if (data) {
@@ -66,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 5000); // 5秒ごとにチェック
 
-    // 2. チャットロジック
+    // チャットロジック
     const chatBox = document.getElementById('chat-box'); // スクロール可能なコンテナ
 
     function addMessage(text, type) {
@@ -87,13 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ソケットの可用性を確認
         if (socket && socket.connected) {
-            // チャット効果用のローカル効果（UFO）をトリガー（今のところchat.jsのロジックを複製）
-            const lowerText = text.toLowerCase();
-            if (lowerText.includes("ufo") || lowerText.includes("宇宙人")) {
-                window.dispatchEvent(new CustomEvent('ufo-trigger'));
-            }
-
-            // Socket経由で送信し、サーバーが全クライアント（デスクトップ＆モバイル）にブロードキャストし、
+            // Socket経由で送信し、サーバーが全クライアントにブロードキャスト
             // そこでAI応答を処理できるようにする。
 
             // sketch.js から UFO のアラインメントを確認
@@ -134,24 +125,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') handleSend();
     });
 
-    // 3. UFOイベント
-    window.addEventListener('ufo-trigger', () => {
-        console.log("UFO発見！");
-        window.showUFO = true;
-        setTimeout(() => {
-            window.showUFO = false; // 10秒後に消える
-        }, 10000);
-    });
+    // 3. UFOイベント (旧ロジック削除済み)
+    // 現在は sketch.js のアラインメント判定を使用しているため、
+    // ここでのキーワード判定やイベントリスナーは不要です。
 
     // 4. センサーとQRコード
-    /* デスクトップUIからセンサーを削除
-    sensorBtn.addEventListener('click', () => {
-        sensors.requestPermission();
-        sensorBtn.style.display = 'none'; // クリック後に非表示
-        addMessage("センサーシステム: オンにしました。", "system");
-    });
-    */
-
     const showQrBtn = document.getElementById('show-qr-btn'); // 更新されたID
     const qrOverlay = document.getElementById('qr-overlay');
     const closeQrBtn = document.getElementById('close-qr');
